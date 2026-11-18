@@ -14,7 +14,7 @@ const [tag, photos] = await Promise.all([getTag(slug), photosForTag(slug)]);
 const label = tag?.label ?? slug;
 ---
 
-<Base title={label} description={tag?.description}>
+<Base path={`tags/${slug}/`} title={label} description={tag?.description}>
 	<main class="page stack">
 		<header class="stack">
 			<h1>{label}</h1>

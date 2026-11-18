@@ -21,7 +21,11 @@ const [photos, note, index] = await Promise.all([
 const artists = workArtists(index, work);
 ---
 
-<Base title={work.data.title} description={`Photos of ${work.data.title}.`}>
+<Base
+	path={`works/${work.id}/`}
+	title={work.data.title}
+	description={`Photos of ${work.data.title}.`}
+>
 	<main class="page stack">
 		<header class="stack">
 			<h1>{work.data.title}</h1>

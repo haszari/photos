@@ -81,6 +81,15 @@ A photo's gallery resolves as `photo.visit.gallery` first, then
 `photo.gallery`. Photos group by visit when one is recorded, otherwise by date
 directory.
 
+## Licensing
+
+- **Photos, captions and notes** — [CC BY 4.0](LICENSE). Attribution: Rua Haszard (haszari), https://cartoonbeats.com, source https://lab.cartoonbeats.com/photos/.
+- **Site code** — [MIT](LICENSE-CODE).
+
+Constants live in `src/lib/license.ts`. Every page emits `<link rel="license">`, a canonical URL, and JSON-LD with `creator` and `license`; photo pages emit an additional `ImageObject`. Nothing is visible on the page — a future `/about/` page can render `ATTRIBUTION_LINE` from the same module.
+
+Per-photo creator attribution is not implemented yet. When other people commit photos, the intended rule is to credit the git committer of each image, so a per-photo `credit` field can be derived from history rather than typed by hand.
+
 ## Guard
 
 `npm run build` runs `scripts/check-photo-access.mjs`, which fails if

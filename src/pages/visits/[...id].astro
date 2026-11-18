@@ -27,7 +27,11 @@ const date = visit.data.visitedAt;
 const heading = visit.data.title ?? (date ? formatDate(date, 'long') : visit.id);
 ---
 
-<Base title={heading} description={gallery ? `Visit to ${gallery.data.name}.` : 'Gallery visit.'}>
+<Base
+	path={`visits/${visit.id}/`}
+	title={heading}
+	description={gallery ? `Visit to ${gallery.data.name}.` : 'Gallery visit.'}
+>
 	<main class="page stack">
 		<header class="stack">
 			<h1>{heading}</h1>

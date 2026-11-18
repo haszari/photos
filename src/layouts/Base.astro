@@ -3,14 +3,27 @@ import { Font } from 'astro:assets';
 import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import { url } from '../lib/url';
+import { CREATOR, PHOTO_LICENSE, SITE_URL } from '../lib/license';
 
 interface Props {
 	title?: string;
 	description?: string;
+	/** Absolute path of this page, used for licence metadata. */
+	path?: string;
 }
 
-const { title, description } = Astro.props;
+const { title, description, path = '' } = Astro.props;
 const pageTitle = title ? `${title} — Photos` : 'Photos';
+const canonical = new URL(path, SITE_URL).href;
+const siteJsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'CollectionPage',
+	name: pageTitle,
+	url: canonical,
+	license: PHOTO_LICENSE.url,
+	creator: { '@type': 'Person', name: CREATOR.name, url: CREATOR.url },
+	copyrightHolder: { '@type': 'Person', name: CREATOR.name },
+};
 ---
 
 <!doctype html>
@@ -24,6 +37,10 @@ const pageTitle = title ? `${title} — Photos` : 'Photos';
 		{description && <meta name="description" content={description} />}
 		<link rel="icon" type="image/svg+xml" href={url('favicon.svg')} />
 		<link rel="icon" href={url('favicon.ico')} sizes="32x32" />
+		<link rel="license" href={PHOTO_LICENSE.url} title={PHOTO_LICENSE.short} />
+		<link rel="canonical" href={canonical} />
+		<script type="application/ld+json" set:html={JSON.stringify(siteJsonLd)} />
+		<slot name="head" />
 		<meta name="generator" content={Astro.generator} />
 	</head>
 	<body>

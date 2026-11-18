@@ -2,8 +2,9 @@
 import { render } from 'astro:content';
 import { Picture } from 'astro:assets';
 import Base from '../../../layouts/Base.astro';
-import { getPhotos } from '../../../lib/photos';
+import { getPhotos, photoHref } from '../../../lib/photos';
 import { getRelations } from '../../../lib/relations';
+import { photoLicenseJsonLd, PHOTO_LICENSE, SITE_URL } from '../../../lib/license';
 import { getTags, getTagRegistry, photoTags } from '../../../lib/tags';
 import { formatDate } from '../../../lib/format';
 import { route } from '../../../lib/url';
@@ -39,7 +40,19 @@ const visitLabel = relations.visit?.data.title
 	: formatDate(relations.visit?.data.visitedAt ?? photo.date, 'long');
 ---
 
-<Base title={pageTitle} description={description || undefined}>
+<Base title={pageTitle} description={description || undefined} path={photoHref(photo)}>
+	<Fragment slot="head">
+		<script
+			type="application/ld+json"
+			set:html={JSON.stringify({
+				...photoLicenseJsonLd(),
+				name: heading,
+				url: new URL(photoHref(photo), SITE_URL).href,
+				caption: description || undefined,
+				license: PHOTO_LICENSE.url,
+			})}
+		/>
+	</Fragment>
 	<main class="photo-page">
 		<h1 class="visually-hidden">{heading}</h1>
 		<figure class="photo-page__figure">

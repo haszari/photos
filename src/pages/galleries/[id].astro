@@ -19,7 +19,11 @@ const groups = await groupPhotos(photos);
 const facts = [gallery.data.location, gallery.data.city, gallery.data.country].filter(Boolean);
 ---
 
-<Base title={gallery.data.name} description={`Photos taken at ${gallery.data.name}.`}>
+<Base
+	path={`galleries/${gallery.id}/`}
+	title={gallery.data.name}
+	description={`Photos taken at ${gallery.data.name}.`}
+>
 	<main class="page stack">
 		<header class="stack">
 			<h1>{gallery.data.name}</h1>

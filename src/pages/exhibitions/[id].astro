@@ -19,7 +19,7 @@ const [photos, note] = await Promise.all([photosForExhibition(exhibition.id), re
 const dates = formatDateRange(exhibition.data.startDate, exhibition.data.endDate);
 ---
 
-<Base title={exhibition.data.title}>
+<Base path={`exhibitions/${exhibition.id}/`} title={exhibition.data.title}>
 	<main class="page stack">
 		<header class="stack">
 			<h1>{exhibition.data.title}</h1>

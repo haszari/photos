@@ -18,7 +18,11 @@ const facts = [
 ].filter(Boolean);
 ---
 
-<Base title={artist.data.name} description={`Photos of work by ${artist.data.name}.`}>
+<Base
+	path={`artists/${artist.id}/`}
+	title={artist.data.name}
+	description={`Photos of work by ${artist.data.name}.`}
+>
 	<main class="page stack">
 		<header class="stack">
 			<h1>{artist.data.name}</h1>
