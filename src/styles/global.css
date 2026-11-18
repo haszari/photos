@@ -3,10 +3,10 @@
 	--wall-right: #c4c1ba;
 	--floor: #8e8580;
 	--floor-band: 18vh;
-	/* Text is one of three colours: grey-black headings, green-black links,
-	   almost-black everything else. */
-	--ink: #0b0f0d;
-	--ink-heading: #262b28;
+	/* Exactly three text colours, deliberately distinct in hue:
+	   heading = neutral grey-black, link = green-black, text = neutral near-black. */
+	--ink: #0d0d0d;
+	--ink-heading: #2e2e2e;
 	--link: #0e3020;
 	--rule: color-mix(in srgb, var(--ink) 18%, transparent);
 	--gap: clamp(0.75rem, 1.5vw, 1.5rem);
