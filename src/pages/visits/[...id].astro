@@ -46,16 +46,16 @@ const hasBody = Boolean(visit.body?.trim());
 								<time datetime={date.toISOString().slice(0, 10)}>{formatDate(date, 'long')}</time>
 							</span>
 						)}
-						{gallery && visit.data.title && (
-							<span>
-								<a href={route(`galleries/${gallery.id}/`)}>{gallery.data.name}</a>
-							</span>
-						)}
 						{exhibitions.map((exhibition) => (
 							<span>
 								<a href={route(`exhibitions/${exhibition.id}/`)}>{exhibition.data.title}</a>
 							</span>
 						))}
+						{gallery && visit.data.title && (
+							<span>
+								<a href={route(`galleries/${gallery.id}/`)}>{gallery.data.name}</a>
+							</span>
+						)}
 					</Fragment>
 				)
 			}
