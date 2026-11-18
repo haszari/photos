@@ -245,6 +245,13 @@ p {
 	margin: 0;
 }
 
+/* Trim the half-leading above and below each line so the box padding reads
+   the same on all four sides. Browsers without text-box-trim fall back to the
+   normal, slightly looser leading. */
+.photo-meta__box > * {
+	text-box: trim-both cap alphabetic;
+}
+
 /* Artist is the headline of the card, work next, year back at text size. */
 .photo-meta__line--artist {
 	font-size: 1.5rem;
