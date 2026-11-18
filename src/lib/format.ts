@@ -24,8 +24,7 @@ export function formatDateRange(start?: Date, end?: Date): string {
 	return '';
 }
 
-/** `oil-paint` -> `Oil paint`. Used when a tag has no metadata entry. */
+/** `oil-paint` -> `oil paint`. Tags are lowercase unless tags.yml supplies a label. */
 export function tagLabel(slug: string): string {
-	const words = slug.replace(/-/g, ' ');
-	return words.charAt(0).toUpperCase() + words.slice(1);
+	return slug.replace(/-/g, ' ');
 }
