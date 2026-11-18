@@ -1,8 +1,8 @@
 ---
 import { render } from 'astro:content';
-import { Picture } from 'astro:assets';
 import Base from '../../../layouts/Base.astro';
-import { getPhotos, photoHref } from '../../../lib/photos';
+import { getPhotos, photoHref, altText } from '../../../lib/photos';
+import PhotoMedia from '../../../components/PhotoMedia.astro';
 import { getRelations } from '../../../lib/relations';
 import { photoLicenseJsonLd, PHOTO_LICENSE, SITE_URL } from '../../../lib/license';
 import { getTags, getTagRegistry, photoTags } from '../../../lib/tags';
@@ -34,7 +34,7 @@ const tags = tagSlugs.map((slug) => tagMap.get(slug)).filter(Boolean);
 const workTitle = relations.works[0]?.data.title;
 const heading = workTitle ?? formatDate(photo.date, 'long');
 const pageTitle = workTitle ? `${workTitle} ${formatDate(photo.date)}` : formatDate(photo.date, 'long');
-const alt = data?.alt ?? data?.sourceCaption ?? '';
+const alt = altText(photo);
 const description = data?.sourceCaption ?? alt;
 const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 ---
@@ -56,17 +56,12 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 		<h1 class="visually-hidden">{heading}</h1>
 		<div class="photo-page__inner">
 		<figure class="photo-page__figure">
-			<Picture
-				src={photo.image}
-				alt={alt}
+			<PhotoMedia
+				photo={photo}
 				widths={[960, 1600, 2400]}
 				sizes="(max-width: 720px) 100vw, 78vw"
-				formats={['avif', 'webp']}
-				fallbackFormat="jpeg"
-				quality={82}
 				loading="eager"
-				decoding="sync"
-				fetchpriority="high"
+				priority
 			/>
 		</figure>
 

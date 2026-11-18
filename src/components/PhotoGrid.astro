@@ -1,5 +1,5 @@
 ---
-import { Picture } from 'astro:assets';
+import PhotoMedia from './PhotoMedia.astro';
 import type { Photo } from '../lib/photos';
 import { photoHref } from '../lib/photos';
 import { route } from '../lib/url';
@@ -7,7 +7,7 @@ import { gridColumns, gridStyle } from '../lib/layout';
 
 interface Props {
 	photos: Photo[];
-	/** How many images to load eagerly, for the initial viewport. */
+	/** How many assets to load eagerly, for the initial viewport. */
 	eagerCount?: number;
 	sizes?: string;
 }
@@ -22,32 +22,22 @@ const resolvedSizes =
 		: columns === 2
 			? '(max-width: 560px) 100vw, 50vw'
 			: '(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw');
-
-function altFor(photo: Photo): string {
-	return photo.entry?.data.alt ?? photo.entry?.data.sourceCaption ?? '';
-}
 ---
 
 <div class="grid-frame">
 	<div class="masonry" style={gridStyle(photos.length)}>
-	{
-		photos.map((photo, index) => (
-			<div class="masonry__item">
-				<a href={route(photoHref(photo))}>
-					<Picture
-						src={photo.image}
-						alt={altFor(photo)}
-						widths={[480, 960, 1440]}
-						sizes={resolvedSizes}
-						formats={['avif', 'webp']}
-						fallbackFormat="jpeg"
-						quality={82}
-						loading={index < eagerCount ? 'eager' : 'lazy'}
-						decoding="async"
-					/>
-				</a>
-			</div>
-		))
-	}
+		{
+			photos.map((photo, index) => (
+				<div class="masonry__item">
+					<a href={route(photoHref(photo))}>
+						<PhotoMedia
+							photo={photo}
+							sizes={resolvedSizes}
+							loading={index < eagerCount ? 'eager' : 'lazy'}
+						/>
+					</a>
+				</div>
+			))
+		}
 	</div>
 </div>

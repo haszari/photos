@@ -15,7 +15,8 @@ npm install
 npm run dev                    # astro dev --background is fine too
 npm run build                  # runs the photo-access guard, then astro build
 npm run preview
-npm run scaffold:photos -- <source-dir> [--date yyyymmdd] [--yes] [--dry-run]
+npm run scaffold:photos -- <source-dir> [--date yyyymmdd] [--yes] [--dry-run] [--update]
+npm run convert:videos -- <file-or-dir> [--mode boomerang|loop] [--max-width 3840] [--fps n] [--crf 18] [--max-duration 6] [--force] [--dry-run]
 ```
 
 ## Adding photos
@@ -38,6 +39,25 @@ date fall back to the visit date, then to a single prompt.
 The scaffolder copies images unchanged and writes a metadata sidecar only when
 there is metadata. Existing files are never overwritten: identical files are
 skipped, different files get a `-2` suffix.
+
+### Videos (boomerangs, cinematographs)
+
+Phones export `.mov`; browsers want `.mp4`. Convert first, then scaffold:
+
+```sh
+npm run convert:videos -- ./incoming/20261114/IMG_9171.mov      # one file
+npm run convert:videos -- ./incoming/20261114                   # whole folder
+
+npm run scaffold:photos -- ./incoming/20261114
+```
+
+- **boomerang** (default): forward + reversed, so it loops seamlessly — the cinematograph look.
+- **loop**: straight trimmed clip.
+- Output is `<stem>.mp4` beside the source: H.264, `yuv420p`, `+faststart`, **no audio**, trimmed to `--max-duration` (default 6s).
+- Resolution and frame rate are preserved. The only resizing is a downscale when the source is wider than `--max-width` (default 3840, i.e. 4K) — nothing is upscaled.
+- Quality is `--crf 18` (x264, `preset slow`): visually near-lossless. Raise the CRF for smaller files, lower it for more fidelity. Existing outputs are skipped unless `--force`.
+- The scaffolder treats `mp4`/`webm` like any other asset: copied unchanged into the date directory, optional sidecar, same date derivation (ffprobe `creation_time`, then manifest, then prompt).
+- On the site the asset renders as `<video autoplay muted loop playsinline>` instead of an `<img>`, so it behaves as a live image in the masonry grid. This is the only autoplaying media on the site; there is no JS to pause it for `prefers-reduced-motion` — a known limitation if that matters later.
 
 ### Exporting from Apple Photos
 
@@ -146,8 +166,8 @@ npm run scaffold:photos -- ./incoming/20261118             # prompts + import
 - Missing answers are prompted: directory date (only if EXIF has none), gallery, visit date, tags, whether to import Photos keywords, and which unmatched caption names should become artist records.
 - Caption prompt lists every name in the run's captions that has no artist record: `[Y] all`, `[n] none`, or numbers like `1,3`. Accepted names become `artists/<slug>.md` and are linked in the sidecars; rejected names stay as `sourceCaption` text with a warning.
 - Prompted answers are written back into `./incoming/20261118/photos.yml` before the confirm step, so an aborted run still keeps your answers. Disable with `--no-save`.
-- Already-imported images are recognised by content hash and skipped, but their metadata is still processed.
-- An existing sidecar only gains keys it is missing. Hand edits are never overwritten.
+- Already-imported files are recognised by content hash. The run reports how many and, when interactive, asks `[s]kip` or `[u]pdate metadata`.
+- By default an existing sidecar only gains keys it is missing, so hand edits are never overwritten. `--update` (or answering `u`) lets the manifest and EXIF overwrite existing fields.
 - Nothing left to do prints `Nothing to import` and exits 0.
 
 ### When no sidecar is written
@@ -168,7 +188,7 @@ photos without metadata would silently disappear from that page.
 | Route | Page |
 |---|---|
 | `/` | all photos, reverse-chronological, grouped, masonry |
-| `/photos/{yyyymmdd}/{slug}/` | photo with metadata box |
+| `/photos/{yyyymmdd}/{slug}/` | photo or video with metadata box |
 | `/artists/`, `/galleries/`, `/tags/` | indexes |
 | `/artists/{id}/`, `/works/{id}/`, `/galleries/{id}/`, `/visits/{id}/`, `/exhibitions/{id}/`, `/tags/{tag}/` | entity pages |
 

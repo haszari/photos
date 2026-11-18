@@ -107,7 +107,8 @@ p {
 	margin-bottom: var(--gap);
 }
 
-.masonry__item img {
+.masonry__item img,
+.masonry__item video {
 	display: block;
 	width: 100%;
 	height: auto;
@@ -184,7 +185,8 @@ p {
 	justify-content: center;
 }
 
-.photo-page__figure img {
+.photo-page__figure img,
+.photo-page__figure video {
 	display: block;
 	max-width: 100%;
 	max-height: calc(100svh - var(--page-pad) * 2);

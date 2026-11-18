@@ -1,0 +1,53 @@
+---
+import { Picture } from 'astro:assets';
+import type { Photo } from '../lib/photos';
+import { altText } from '../lib/photos';
+
+interface Props {
+	photo: Photo;
+	sizes: string;
+	widths?: number[];
+	quality?: number;
+	loading?: 'eager' | 'lazy';
+	priority?: boolean;
+}
+
+const {
+	photo,
+	sizes,
+	widths = [480, 960, 1440],
+	quality = 82,
+	loading = 'lazy',
+	priority = false,
+} = Astro.props;
+
+const alt = altText(photo);
+---
+
+{
+	photo.media.kind === 'image' ? (
+		<Picture
+			src={photo.media.image}
+			alt={alt}
+			widths={widths}
+			sizes={sizes}
+			formats={['avif', 'webp']}
+			fallbackFormat="jpeg"
+			quality={quality}
+			loading={loading}
+			decoding="async"
+			fetchpriority={priority ? 'high' : undefined}
+		/>
+	) : (
+		<video
+			src={photo.media.src}
+			aria-label={alt || undefined}
+			autoplay
+			muted
+			loop
+			playsinline
+			preload="metadata"
+			decoding="async"
+		/>
+	)
+}

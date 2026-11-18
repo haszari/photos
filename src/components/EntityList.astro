@@ -1,5 +1,5 @@
 ---
-import { Picture } from 'astro:assets';
+import PhotoMedia from './PhotoMedia.astro';
 import type { Photo } from '../lib/photos';
 import { route } from '../lib/url';
 
@@ -23,16 +23,11 @@ const { items } = Astro.props;
 			<li>
 				<a href={route(item.href)}>
 					{item.photo && (
-						<Picture
-							src={item.photo.image}
-							alt=""
+						<PhotoMedia
+							photo={item.photo}
 							widths={[240, 480]}
 							sizes="(max-width: 560px) 50vw, 240px"
-							formats={['avif', 'webp']}
-							fallbackFormat="jpeg"
 							quality={78}
-							loading="lazy"
-							decoding="async"
 						/>
 					)}
 					<span>{item.label}</span>

@@ -12,6 +12,8 @@
  *   --tags <a,b>          Default tags for the run
  *   --manifest <file>     Metadata file (defaults to <source>/photos.yml)
  *   --no-save             Do not write prompted answers back to the manifest
+ *   --update              Overwrite sidecar fields from the manifest/EXIF
+ *                         (default: only add fields that are missing)
  *   --yes                 Accept the plan without confirming
  *   --dry-run             Print the plan and exit
  *
@@ -32,12 +34,16 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 import { createInterface } from 'node:readline/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import exifr from 'exifr';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
+const execFileAsync = promisify(execFile);
 const ROOT = process.cwd();
 const CONTENT = path.join(ROOT, 'src', 'content');
-const SUPPORTED = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
+const SUPPORTED = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.mp4', '.webm']);
+const VIDEO = new Set(['.mp4', '.webm']);
 const MEDIA_EXTENSIONS = new Set([
 	'.heic',
 	'.heif',
@@ -45,9 +51,9 @@ const MEDIA_EXTENSIONS = new Set([
 	'.tiff',
 	'.gif',
 	'.mov',
-	'.mp4',
 	'.m4v',
 	'.avi',
+	'.mkv',
 ]);
 
 const argv = process.argv.slice(2);
@@ -61,6 +67,7 @@ const options = {
 	yes: false,
 	dryRun: false,
 	save: true,
+	update: false,
 };
 
 for (let index = 0; index < argv.length; index += 1) {
@@ -72,6 +79,7 @@ for (let index = 0; index < argv.length; index += 1) {
 	else if (arg === '--tags') options.tags = splitList(next());
 	else if (arg === '--manifest') options.manifest = next();
 	else if (arg === '--no-save') options.save = false;
+	else if (arg === '--update') options.update = true;
 	else if (arg === '--yes' || arg === '-y') options.yes = true;
 	else if (arg === '--dry-run') options.dryRun = true;
 	else if (arg === '--help' || arg === '-h') {
@@ -90,6 +98,16 @@ function helpText(contents) {
 	const start = contents.indexOf('/**');
 	const end = contents.indexOf('*/');
 	return contents.slice(start + 3, end).replace(/^ \* ?/gm, '');
+}
+
+function normalise(value) {
+	if (value instanceof Date) return value.toISOString();
+	if (Array.isArray(value)) return value.map(normalise);
+	return value;
+}
+
+function sameValue(a, b) {
+	return JSON.stringify(normalise(a)) === JSON.stringify(normalise(b));
 }
 
 function compact(object) {
@@ -239,6 +257,25 @@ function resolveArtist(name) {
 	return { id: slug, created: true };
 }
 
+/** Videos have no EXIF; ffprobe often has a creation_time. */
+async function videoTakenAt(file) {
+	try {
+		const { stdout } = await execFileAsync('ffprobe', [
+			'-v',
+			'error',
+			'-show_entries',
+			'format_tags=creation_time',
+			'-of',
+			'json',
+			file,
+		]);
+		const created = JSON.parse(stdout)?.format?.tags?.creation_time;
+		return created ? new Date(created) : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 /** Caption segments, e.g. `Nigel Wilson | Mary Jane Sneyd` -> two names. */
 function captionSegments(captionText) {
 	return (captionText ?? '')
@@ -365,6 +402,11 @@ const scanned = new Map();
 for (const name of images) {
 	const sourcePath = path.join(sourceDir, name);
 	const info = { takenAt: undefined, captionText: undefined, keywordTags: [] };
+	if (VIDEO.has(path.extname(name).toLowerCase())) {
+		info.takenAt = await videoTakenAt(sourcePath);
+		scanned.set(name, info);
+		continue;
+	}
 	try {
 		const exif = await exifr.parse(sourcePath, {
 			xmp: true,
@@ -534,16 +576,75 @@ if (interactive) {
 
 const targetDatestamps = [...new Set(images.map((name) => datestampFor(name)))].sort();
 
-for (const name of images) {
+/** Where a source file lands and whether that copy already exists. Cached. */
+const destinations = new Map();
+async function resolveDestination(name) {
+	const cached = destinations.get(name);
+	if (cached) return cached;
+
 	const sourcePath = path.join(sourceDir, name);
-	const metadata = manifestPhotos[name] ?? {};
 	const extension = path.extname(name).toLowerCase();
 	const stem = path.basename(name, path.extname(name));
 	const safeStem = stem.replace(/\s+/g, '-').replace(/[^\p{L}\p{N}._-]/gu, '');
-
 	const datestamp = datestampFor(name);
 	const year = datestamp.slice(0, 4);
 	const destinationDir = path.join(CONTENT, 'photos', year, datestamp);
+
+	const baseFilename = `${datestamp}-${safeStem}`;
+	let filename = `${baseFilename}${extension}`;
+	let counter = 2;
+	let alreadyImported = false;
+	for (;;) {
+		const candidate = path.join(destinationDir, filename);
+		let digest;
+		try {
+			digest = await hashFile(candidate);
+		} catch {
+			break; // free slot
+		}
+		if (digest === (await hashFile(sourcePath))) {
+			alreadyImported = true;
+			break;
+		}
+		filename = `${baseFilename}-${counter}${extension}`;
+		counter += 1;
+	}
+
+	const resolved = {
+		sourcePath,
+		extension,
+		datestamp,
+		year,
+		destinationDir,
+		filename,
+		alreadyImported,
+	};
+	destinations.set(name, resolved);
+	return resolved;
+}
+
+const duplicates = [];
+for (const name of images) {
+	const resolved = await resolveDestination(name);
+	if (resolved.alreadyImported) duplicates.push(name);
+}
+
+if (duplicates.length > 0) {
+	if (interactive && !options.update) {
+		const answer = await ask(
+			`${duplicates.length} file(s) already imported. [s]kip or [u]pdate metadata: `,
+		);
+		if (/^u/i.test(answer.trim())) options.update = true;
+	}
+	console.log(
+		`Already imported: ${duplicates.length} file(s)${options.update ? ', updating sidecars' : ', skipping'}.`,
+	);
+}
+
+for (const name of images) {
+	const { sourcePath, extension, datestamp, year, destinationDir, filename, alreadyImported } =
+		await resolveDestination(name);
+	const metadata = manifestPhotos[name] ?? {};
 
 	const scannedInfo = scanned.get(name) ?? {};
 	const takenAt = metadata.takenAt ?? scannedInfo.takenAt;
@@ -595,27 +696,6 @@ for (const name of images) {
 		...(importKeywords ? keywordTags : []),
 	]);
 
-	const baseFilename = `${datestamp}-${safeStem}`;
-	let filename = `${baseFilename}${extension}`;
-	let counter = 2;
-	let alreadyImported = false;
-	// Collisions are resolved against the destination, never by overwriting.
-	for (;;) {
-		const candidate = path.join(destinationDir, filename);
-		let digest;
-		try {
-			digest = await hashFile(candidate);
-		} catch {
-			break; // free slot
-		}
-		if (digest === (await hashFile(sourcePath))) {
-			alreadyImported = true;
-			break;
-		}
-		filename = `${baseFilename}-${counter}${extension}`;
-		counter += 1;
-	}
-
 	const sidecarStem = path.basename(filename, extension);
 	const sidecarFile = path.join(destinationDir, `${sidecarStem}.md`);
 	const imageId = `${year}/${datestamp}/${sidecarStem}`;
@@ -662,16 +742,29 @@ for (const name of images) {
 	}
 
 	if (existingSidecar) {
-		// Existing sidecars only gain keys they are missing. Hand edits win.
-		const added = Object.keys(sidecarData).filter(
-			(key) => existingSidecar.data[key] === undefined,
+		const computed = Object.fromEntries(
+			Object.entries(sidecarData).filter(([, value]) => value !== undefined),
 		);
-		if (added.length > 0) {
+		// By default existing sidecars only gain missing keys, so hand edits win.
+		// --update lets the manifest/EXIF overwrite what is already there.
+		const added = Object.keys(computed).filter((key) => existingSidecar.data[key] === undefined);
+		const changed = options.update
+			? Object.keys(computed).filter(
+					(key) =>
+						existingSidecar.data[key] !== undefined &&
+						!sameValue(existingSidecar.data[key], computed[key]),
+				)
+			: [];
+
+		if (added.length > 0 || changed.length > 0) {
 			plan.sidecarUpdates.push({
 				file: sidecarFile,
 				id: imageId,
-				data: { ...sidecarData, ...existingSidecar.data },
+				data: options.update
+					? { ...existingSidecar.data, ...computed }
+					: { ...computed, ...existingSidecar.data },
 				added,
+				changed,
 				body: existingSidecar.body,
 			});
 		}
@@ -719,7 +812,10 @@ if (plan.sidecars.length > 0) {
 if (plan.sidecarUpdates.length > 0) {
 	console.log('\nSidecar updates:');
 	for (const update of plan.sidecarUpdates) {
-		console.log(`  ${path.relative(ROOT, update.file)} (adds ${update.added.join(', ')})`);
+		const parts = [];
+		if (update.added.length > 0) parts.push(`adds ${update.added.join(', ')}`);
+		if (update.changed.length > 0) parts.push(`updates ${update.changed.join(', ')}`);
+		console.log(`  ${path.relative(ROOT, update.file)} (${parts.join('; ')})`);
 	}
 }
 if (plan.skipped.length > 0) {
