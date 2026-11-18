@@ -243,6 +243,7 @@ p {
 
 .photo-meta__line {
 	margin: 0;
+	line-height: 1.35;
 }
 
 /* Trim the half-leading above and below each line so the box padding reads
@@ -255,12 +256,10 @@ p {
 /* Artist is the headline of the card, work next, year back at text size. */
 .photo-meta__line--artist {
 	font-size: 1.5rem;
-	line-height: 1.25;
 }
 
 .photo-meta__line--work {
 	font-size: 1.15rem;
-	line-height: 1.3;
 }
 
 .photo-meta__year {
