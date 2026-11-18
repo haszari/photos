@@ -1,0 +1,45 @@
+---
+import { Picture } from 'astro:assets';
+import type { Photo } from '../lib/photos';
+import { photoHref } from '../lib/photos';
+import { route } from '../lib/url';
+
+interface Props {
+	photos: Photo[];
+	/** How many images to load eagerly, for the initial viewport. */
+	eagerCount?: number;
+	sizes?: string;
+}
+
+const {
+	photos,
+	eagerCount = 2,
+	sizes = '(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw',
+} = Astro.props;
+
+function altFor(photo: Photo): string {
+	return photo.entry?.data.alt ?? photo.entry?.data.sourceCaption ?? '';
+}
+---
+
+<div class="masonry">
+	{
+		photos.map((photo, index) => (
+			<div class="masonry__item">
+				<a href={route(photoHref(photo))}>
+					<Picture
+						src={photo.image}
+						alt={altFor(photo)}
+						widths={[480, 960, 1440]}
+						sizes={sizes}
+						formats={['avif', 'webp']}
+						fallbackFormat="jpeg"
+						quality={82}
+						loading={index < eagerCount ? 'eager' : 'lazy'}
+						decoding="async"
+					/>
+				</a>
+			</div>
+		))
+	}
+</div>

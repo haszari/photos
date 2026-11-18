@@ -1,0 +1,33 @@
+---
+import { Font } from 'astro:assets';
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import { url } from '../lib/url';
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const { title, description } = Astro.props;
+const pageTitle = title ? `${title} — Photos` : 'Photos';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<Font cssVariable="--font-sans" preload />
+		<ClientRouter />
+		<title>{pageTitle}</title>
+		{description && <meta name="description" content={description} />}
+		<link rel="icon" type="image/svg+xml" href={url('favicon.svg')} />
+		<link rel="icon" href={url('favicon.ico')} sizes="32x32" />
+		<meta name="generator" content={Astro.generator} />
+	</head>
+	<body>
+		<div class="room" aria-hidden="true"></div>
+		<slot />
+	</body>
+</html>

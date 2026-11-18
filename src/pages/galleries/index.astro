@@ -1,0 +1,28 @@
+---
+import Base from '../../layouts/Base.astro';
+import EntityList from '../../components/EntityList.astro';
+import { getIndex } from '../../lib/content';
+import { photosForGallery, featuredPhoto } from '../../lib/queries';
+
+const { galleries } = await getIndex();
+
+const items = await Promise.all(
+	galleries.map(async (gallery) => {
+		const photos = await photosForGallery(gallery.id);
+		return {
+			href: `galleries/${gallery.id}/`,
+			label: gallery.data.name,
+			meta: photos.length === 1 ? '1 photo' : `${photos.length} photos`,
+			photo: featuredPhoto(photos, gallery.data.featuredPhoto),
+		};
+	}),
+);
+---
+
+<Base title="Galleries">
+	<main class="page stack">
+		<h1>Galleries</h1>
+		<EntityList items={items} />
+		{items.length === 0 && <p>No galleries yet.</p>}
+	</main>
+</Base>

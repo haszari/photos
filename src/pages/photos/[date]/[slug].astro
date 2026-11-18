@@ -1,0 +1,157 @@
+---
+import { render } from 'astro:content';
+import { Picture } from 'astro:assets';
+import Base from '../../../layouts/Base.astro';
+import { getPhotos } from '../../../lib/photos';
+import { getRelations } from '../../../lib/relations';
+import { getTags, getTagRegistry, photoTags } from '../../../lib/tags';
+import { formatDate } from '../../../lib/format';
+import { route } from '../../../lib/url';
+
+export async function getStaticPaths() {
+	const photos = await getPhotos();
+	return photos.map((photo) => ({
+		params: { date: photo.datestamp, slug: photo.slug },
+		props: { photo },
+	}));
+}
+
+const { photo } = Astro.props;
+const [relations, registry, allTags] = await Promise.all([
+	getRelations(photo),
+	getTagRegistry(),
+	getTags(),
+]);
+
+const note = photo.entry ? await render(photo.entry) : undefined;
+const data = photo.entry?.data;
+const tagSlugs = photoTags(data?.tags, registry);
+const tagMap = new Map(allTags.map((tag) => [tag.slug, tag]));
+const tags = tagSlugs.map((slug) => tagMap.get(slug)).filter(Boolean);
+
+const workTitle = relations.works[0]?.data.title;
+const heading = workTitle ?? formatDate(photo.date, 'long');
+const pageTitle = workTitle ? `${workTitle} — ${formatDate(photo.date)}` : formatDate(photo.date, 'long');
+const alt = data?.alt ?? data?.sourceCaption ?? '';
+const description = data?.sourceCaption ?? alt;
+const visitLabel = relations.visit?.data.title
+	? relations.visit.data.title
+	: formatDate(relations.visit?.data.visitedAt ?? photo.date, 'long');
+---
+
+<Base title={pageTitle} description={description || undefined}>
+	<main class="photo-page">
+		<h1 class="visually-hidden">{heading}</h1>
+		<figure class="photo-page__figure">
+			<Picture
+				src={photo.image}
+				alt={alt}
+				widths={[960, 1600, 2400]}
+				sizes="(max-width: 720px) 100vw, 78vw"
+				formats={['avif', 'webp']}
+				fallbackFormat="jpeg"
+				quality={82}
+				loading="eager"
+				decoding="sync"
+				fetchpriority="high"
+			/>
+		</figure>
+
+		<aside class="photo-meta">
+			<dl>
+				{
+					relations.works.length > 0 && (
+						<>
+							<dt>Work</dt>
+							{relations.works.map((work) => (
+								<dd>
+									<a href={route(`works/${work.id}/`)}>{work.data.title}</a>
+									{work.data.date ? `, ${work.data.date}` : ''}
+								</dd>
+							))}
+						</>
+					)
+				}
+				{
+					relations.artists.length > 0 && (
+						<>
+							<dt>Artist</dt>
+							{relations.artists.map((artist) => (
+								<dd>
+									<a href={route(`artists/${artist.id}/`)}>{artist.data.name}</a>
+								</dd>
+							))}
+						</>
+					)
+				}
+				{
+					relations.gallery && (
+						<>
+							<dt>Gallery</dt>
+							<dd>
+								<a href={route(`galleries/${relations.gallery.id}/`)}>
+									{relations.gallery.data.name}
+								</a>
+							</dd>
+						</>
+					)
+				}
+				{
+					relations.exhibition && (
+						<>
+							<dt>Exhibition</dt>
+							<dd>
+								<a href={route(`exhibitions/${relations.exhibition.id}/`)}>
+									{relations.exhibition.data.title}
+								</a>
+							</dd>
+						</>
+					)
+				}
+				{
+					relations.visit && (
+						<>
+							<dt>Visit</dt>
+							<dd>
+								<a href={route(`visits/${relations.visit.id}/`)}>
+									{visitLabel}
+								</a>
+							</dd>
+						</>
+					)
+				}
+				{
+					data?.takenAt && (
+						<>
+							<dt>Taken</dt>
+							<dd>{formatDate(data.takenAt, 'long')}</dd>
+						</>
+					)
+				}
+				{
+					tags.length > 0 && (
+						<>
+							<dt>Tags</dt>
+							<dd>
+								{tags.map((tag, index) => (
+									<>
+										{index > 0 && ', '}
+										<a href={route(`tags/${tag!.slug}/`)}>{tag!.label}</a>
+									</>
+								))}
+							</dd>
+						</>
+					)
+				}
+			</dl>
+			{note && note.Content && (
+				<div class="prose">
+					<note.Content />
+				</div>
+			)}
+			<p class="visually-hidden">
+				<a href={route('')}>All photos</a>
+			</p>
+		</aside>
+	</main>
+</Base>

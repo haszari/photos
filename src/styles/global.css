@@ -1,0 +1,278 @@
+:root {
+	--wall-left: #faf8f4;
+	--wall-right: #c4c1ba;
+	--floor: #8e8580;
+	--ink: #132018;
+	--ink-muted: #6d635c;
+	--rule: color-mix(in srgb, var(--ink) 18%, transparent);
+	--gap: clamp(0.75rem, 1.5vw, 1.5rem);
+	--page-pad: clamp(1rem, 2.5vw, 2.5rem);
+	--font-sans: ui-sans-serif, system-ui, sans-serif;
+
+	color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	min-height: 100svh;
+	background-color: var(--wall-left);
+	color: var(--ink);
+	font-family: var(--font-sans);
+	font-size: 1rem;
+	line-height: 1.45;
+	text-rendering: optimizeLegibility;
+}
+
+/* Room corner: three planes behind all content. */
+.room {
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	overflow: hidden;
+	background-color: var(--wall-left);
+}
+
+.room::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 50%;
+	height: 62%;
+	background-color: var(--wall-right);
+}
+
+.room::after {
+	content: '';
+	position: absolute;
+	inset: 62% 0 0 0;
+	background-color: var(--floor);
+	clip-path: polygon(0 14%, 100% 0, 100% 100%, 0 100%);
+}
+
+.page {
+	padding: var(--page-pad);
+}
+
+a {
+	color: inherit;
+	text-decoration-color: var(--rule);
+	text-underline-offset: 0.2em;
+}
+
+a:hover {
+	text-decoration-color: currentColor;
+}
+
+:focus-visible {
+	outline: 2px solid var(--ink);
+	outline-offset: 3px;
+}
+
+h1,
+h2,
+h3 {
+	font-weight: 500;
+	line-height: 1.15;
+	margin: 0;
+}
+
+h1 {
+	font-size: clamp(1.25rem, 2vw, 1.75rem);
+	letter-spacing: -0.01em;
+}
+
+p {
+	margin: 0;
+}
+
+.prose > * + * {
+	margin-top: 0.75em;
+}
+
+.prose {
+	max-width: 62ch;
+	font-size: 0.95rem;
+}
+
+/* Masonry: CSS columns keep the site JS-free. */
+.masonry {
+	columns: 3;
+	column-gap: var(--gap);
+}
+
+.masonry__item {
+	break-inside: avoid;
+	margin-bottom: var(--gap);
+}
+
+.masonry__item img {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+@media (max-width: 900px) {
+	.masonry {
+		columns: 2;
+	}
+}
+
+@media (max-width: 560px) {
+	.masonry {
+		columns: 1;
+	}
+}
+
+/* Date / visit caption below a photo group. */
+.group-caption {
+	margin-top: calc(var(--gap) / 2);
+	font-size: 0.8rem;
+	letter-spacing: 0.01em;
+	color: var(--ink-muted);
+}
+
+.group-caption time {
+	font-variant-numeric: tabular-nums;
+}
+
+.group-caption a {
+	color: var(--ink);
+}
+
+.gallery {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(2rem, 5vw, 4rem);
+}
+
+/* Photo detail */
+.photo-page {
+	min-height: 100svh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: clamp(1rem, 3vw, 3rem);
+	padding: var(--page-pad);
+}
+
+.photo-page__figure {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	justify-content: center;
+}
+
+.photo-page__figure img {
+	display: block;
+	max-width: 100%;
+	max-height: calc(100svh - var(--page-pad) * 2);
+	width: auto;
+	height: auto;
+	object-fit: contain;
+}
+
+.photo-meta {
+	flex: 0 0 clamp(180px, 18vw, 300px);
+	align-self: flex-end;
+	font-size: 0.8rem;
+	line-height: 1.5;
+}
+
+.photo-meta dl {
+	margin: 0;
+	display: grid;
+	gap: 0.35rem;
+}
+
+.photo-meta dt {
+	font-size: 0.7rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--ink-muted);
+}
+
+.photo-meta dd {
+	margin: 0 0 0.35rem;
+}
+
+@media (max-width: 720px) {
+	.photo-page {
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: flex-start;
+	}
+
+	.photo-page__figure img {
+		max-height: 70svh;
+	}
+
+	.photo-meta {
+		flex-basis: auto;
+		align-self: stretch;
+	}
+}
+
+/* Simple lists (entity indexes) */
+.entity-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
+	gap: var(--gap);
+}
+
+.entity-list li {
+	border-top: 1px solid var(--rule);
+	padding-top: 0.5rem;
+}
+
+.entity-list .count {
+	color: var(--ink-muted);
+	font-size: 0.8rem;
+}
+
+.tag-cloud {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.stack {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.facts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem 1rem;
+	font-size: 0.8rem;
+	color: var(--ink-muted);
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}

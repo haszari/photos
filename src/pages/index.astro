@@ -1,16 +1,35 @@
 ---
+import Base from '../layouts/Base.astro';
+import PhotoGrid from '../components/PhotoGrid.astro';
+import { getPhotos } from '../lib/photos';
+import { groupPhotos } from '../lib/groups';
+import { formatDate } from '../lib/format';
+import { route } from '../lib/url';
+
+const photos = await getPhotos();
+const groups = await groupPhotos(photos);
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Base>
+	<main class="page gallery">
+		<h1 class="visually-hidden">All photos</h1>
+		{
+			groups.map((group) => (
+				<section>
+					<PhotoGrid photos={group.photos} />
+					<p class="group-caption">
+						<time datetime={group.date.toISOString().slice(0, 10)}>{formatDate(group.date)}</time>
+						{group.gallery && (
+							<>
+								{' — '}
+								<a href={route(`galleries/${group.gallery.id}/`)}>{group.gallery.data.name}</a>
+							</>
+						)}
+						{!group.gallery && group.visit?.data.title && ` — ${group.visit.data.title}`}
+					</p>
+				</section>
+			))
+		}
+		{photos.length === 0 && <p>No photos yet.</p>}
+	</main>
+</Base>

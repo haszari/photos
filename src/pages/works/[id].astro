@@ -1,0 +1,50 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import PhotoGrid from '../../components/PhotoGrid.astro';
+import { getIndex } from '../../lib/content';
+import { route } from '../../lib/url';
+import { photosForWork } from '../../lib/queries';
+import { workArtists } from '../../lib/relations';
+
+export async function getStaticPaths() {
+	const { works } = await getIndex();
+	return works.map((work) => ({ params: { id: work.id }, props: { work } }));
+}
+
+const { work } = Astro.props;
+const [photos, note, index] = await Promise.all([
+	photosForWork(work.id),
+	render(work),
+	getIndex(),
+]);
+const artists = workArtists(index, work);
+---
+
+<Base title={work.data.title} description={`Photos of ${work.data.title}.`}>
+	<main class="page stack">
+		<header class="stack">
+			<h1>{work.data.title}</h1>
+			<p class="facts">
+				{work.data.date && <span>{work.data.date}</span>}
+				{
+					artists.map((artist, position) => (
+						<>
+							{position > 0 && <span>·</span>}
+							<a href={route(`artists/${artist.id}/`)}>{artist.data.name}</a>
+						</>
+					))
+				}
+			</p>
+			{
+				note.Content && (
+					<div class="prose">
+						<note.Content />
+					</div>
+				)
+			}
+		</header>
+		<PhotoGrid photos={photos} />
+		{photos.length === 0 && <p>No photos yet.</p>}
+	</main>
+</Base>

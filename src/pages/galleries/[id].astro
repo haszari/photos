@@ -1,0 +1,57 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import PhotoGrid from '../../components/PhotoGrid.astro';
+import { getIndex } from '../../lib/content';
+import { groupPhotos } from '../../lib/groups';
+import { photosForGallery } from '../../lib/queries';
+import { formatDate } from '../../lib/format';
+import { route } from '../../lib/url';
+
+export async function getStaticPaths() {
+	const { galleries } = await getIndex();
+	return galleries.map((gallery) => ({ params: { id: gallery.id }, props: { gallery } }));
+}
+
+const { gallery } = Astro.props;
+const [photos, note] = await Promise.all([photosForGallery(gallery.id), render(gallery)]);
+const groups = await groupPhotos(photos);
+const facts = [gallery.data.location, gallery.data.city, gallery.data.country].filter(Boolean);
+---
+
+<Base title={gallery.data.name} description={`Photos taken at ${gallery.data.name}.`}>
+	<main class="page stack">
+		<header class="stack">
+			<h1>{gallery.data.name}</h1>
+			{facts.length > 0 && <p class="facts">{facts.join(' · ')}</p>}
+			{
+				note.Content && (
+					<div class="prose">
+						<note.Content />
+					</div>
+				)
+			}
+		</header>
+
+		<div class="gallery">
+			{
+				groups.map((group) => (
+					<section>
+						<PhotoGrid photos={group.photos} />
+						<p class="group-caption">
+							<time datetime={group.date.toISOString().slice(0, 10)}>{formatDate(group.date)}</time>
+							{group.visit?.data.title && ` — ${group.visit.data.title}`}
+							{group.visit && (
+								<>
+									{' — '}
+									<a href={route(`visits/${group.visit.id}/`)}>visit</a>
+								</>
+							)}
+						</p>
+					</section>
+				))
+			}
+		</div>
+		{photos.length === 0 && <p>No photos yet.</p>}
+	</main>
+</Base>

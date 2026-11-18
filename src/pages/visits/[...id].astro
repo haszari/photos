@@ -1,0 +1,64 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import PhotoGrid from '../../components/PhotoGrid.astro';
+import { getIndex, visitGallery } from '../../lib/content';
+import { photosForVisit } from '../../lib/queries';
+import { formatDate } from '../../lib/format';
+import { route } from '../../lib/url';
+
+export async function getStaticPaths() {
+	const [index] = await Promise.all([getIndex()]);
+	return index.visits.map((visit) => ({ params: { id: visit.id }, props: { visit } }));
+}
+
+const { visit } = Astro.props;
+const [photos, note, index] = await Promise.all([
+	photosForVisit(visit.id),
+	render(visit),
+	getIndex(),
+]);
+
+const gallery = visitGallery(index, visit);
+const exhibitions = (visit.data.exhibitions ?? [])
+	.map((reference) => index.exhibitionById.get(reference.id))
+	.filter(Boolean);
+const date = visit.data.visitedAt;
+const heading = visit.data.title ?? (date ? formatDate(date, 'long') : visit.id);
+---
+
+<Base title={heading} description={gallery ? `Visit to ${gallery.data.name}.` : 'Gallery visit.'}>
+	<main class="page stack">
+		<header class="stack">
+			<h1>{heading}</h1>
+			<p class="facts">
+				{date && <time datetime={date.toISOString().slice(0, 10)}>{formatDate(date, 'long')}</time>}
+				{
+					gallery && (
+						<>
+							<span>·</span>
+							<a href={route(`galleries/${gallery.id}/`)}>{gallery.data.name}</a>
+						</>
+					)
+				}
+				{
+					exhibitions.map((exhibition, position) => (
+						<>
+							<span>·</span>
+							<a href={route(`exhibitions/${exhibition!.id}/`)}>{exhibition!.data.title}</a>
+						</>
+					))
+				}
+			</p>
+			{
+				note.Content && (
+					<div class="prose">
+						<note.Content />
+					</div>
+				)
+			}
+		</header>
+		<PhotoGrid photos={photos} />
+		{photos.length === 0 && <p>No photos yet.</p>}
+	</main>
+</Base>

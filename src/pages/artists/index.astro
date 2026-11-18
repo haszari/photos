@@ -1,0 +1,28 @@
+---
+import Base from '../../layouts/Base.astro';
+import EntityList from '../../components/EntityList.astro';
+import { getIndex } from '../../lib/content';
+import { photosForArtist, featuredPhoto } from '../../lib/queries';
+
+const { artists } = await getIndex();
+
+const items = await Promise.all(
+	artists.map(async (artist) => {
+		const photos = await photosForArtist(artist.id);
+		return {
+			href: `artists/${artist.id}/`,
+			label: artist.data.name,
+			meta: photos.length === 1 ? '1 photo' : `${photos.length} photos`,
+			photo: featuredPhoto(photos, artist.data.featuredPhoto),
+		};
+	}),
+);
+---
+
+<Base title="Artists">
+	<main class="page stack">
+		<h1>Artists</h1>
+		<EntityList items={items} />
+		{items.length === 0 && <p>No artists yet.</p>}
+	</main>
+</Base>

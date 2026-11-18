@@ -1,0 +1,44 @@
+---
+import { Picture } from 'astro:assets';
+import type { Photo } from '../lib/photos';
+import { route } from '../lib/url';
+
+interface Item {
+	href: string;
+	label: string;
+	meta?: string;
+	photo?: Photo;
+}
+
+interface Props {
+	items: Item[];
+}
+
+const { items } = Astro.props;
+---
+
+<ul class="entity-list">
+	{
+		items.map((item) => (
+			<li>
+				<a href={route(item.href)}>
+					{item.photo && (
+						<Picture
+							src={item.photo.image}
+							alt=""
+							widths={[240, 480]}
+							sizes="(max-width: 560px) 50vw, 240px"
+							formats={['avif', 'webp']}
+							fallbackFormat="jpeg"
+							quality={78}
+							loading="lazy"
+							decoding="async"
+						/>
+					)}
+					<span>{item.label}</span>
+					{item.meta && <span class="count"> {item.meta}</span>}
+				</a>
+			</li>
+		))
+	}
+</ul>

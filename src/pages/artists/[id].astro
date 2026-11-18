@@ -1,0 +1,37 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import PhotoGrid from '../../components/PhotoGrid.astro';
+import { getIndex } from '../../lib/content';
+import { photosForArtist } from '../../lib/queries';
+
+export async function getStaticPaths() {
+	const { artists } = await getIndex();
+	return artists.map((artist) => ({ params: { id: artist.id }, props: { artist } }));
+}
+
+const { artist } = Astro.props;
+const [photos, note] = await Promise.all([photosForArtist(artist.id), render(artist)]);
+const facts = [
+	artist.data.country,
+	...(artist.data.aliases?.length ? [`also ${artist.data.aliases.join(', ')}`] : []),
+].filter(Boolean);
+---
+
+<Base title={artist.data.name} description={`Photos of work by ${artist.data.name}.`}>
+	<main class="page stack">
+		<header class="stack">
+			<h1>{artist.data.name}</h1>
+			{facts.length > 0 && <p class="facts">{facts.join(' · ')}</p>}
+			{
+				note.Content && (
+					<div class="prose">
+						<note.Content />
+					</div>
+				)
+			}
+		</header>
+		<PhotoGrid photos={photos} />
+		{photos.length === 0 && <p>No photos yet.</p>}
+	</main>
+</Base>

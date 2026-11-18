@@ -1,0 +1,26 @@
+---
+import Base from '../../layouts/Base.astro';
+import PhotoGrid from '../../components/PhotoGrid.astro';
+import { getTag, getTags } from '../../lib/tags';
+import { photosForTag } from '../../lib/queries';
+
+export async function getStaticPaths() {
+	const tags = await getTags();
+	return tags.map((tag) => ({ params: { tag: tag.slug }, props: { slug: tag.slug } }));
+}
+
+const { slug } = Astro.props;
+const [tag, photos] = await Promise.all([getTag(slug), photosForTag(slug)]);
+const label = tag?.label ?? slug;
+---
+
+<Base title={label} description={tag?.description}>
+	<main class="page stack">
+		<header class="stack">
+			<h1>{label}</h1>
+			{tag?.description && <p class="facts">{tag.description}</p>}
+		</header>
+		<PhotoGrid photos={photos} />
+		{photos.length === 0 && <p>No photos yet.</p>}
+	</main>
+</Base>
