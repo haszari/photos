@@ -131,7 +131,7 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 						<p class="photo-meta__line photo-meta__line--tags">
 							{tags.map((tag, index) => (
 								<>
-									{index > 0 && ' '}
+									{index > 0 && ', '}
 									<a href={route(`tags/${tag!.slug}/`)}>{tag!.label}</a>
 								</>
 							))}
