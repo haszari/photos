@@ -21,7 +21,6 @@ npm run scaffold:photos -- <source-dir> [--date yyyymmdd] [--yes] [--dry-run]
 ## Adding photos
 
 1. Export JPEGs from Apple Photos into a folder, e.g. `incoming/20261118/`.
-   HEIC and video are rejected by the scaffolder — export JPEG.
 2. Optionally add `incoming/20261118/photos.yml` describing the visit and any
    per-photo metadata.
 3. Run the scaffolder, review `git diff`, commit images and records together.
@@ -33,6 +32,45 @@ npm run scaffold:photos -- ./incoming/20261118 --date 20261118
 The scaffolder copies images unchanged and writes a metadata sidecar only when
 there is metadata. Existing files are never overwritten: identical files are
 skipped, different files get a `-2` suffix.
+
+### Exporting from Apple Photos
+
+Export in Photos with **File → Export → Export Photos…**, not `Export Unmodified
+Original` and not drag-and-drop. In the export sheet set:
+
+- **Photo Kind:** JPEG
+- **Quality:** Maximum
+- **Include:** tick **Caption**, **Keywords**, and any location/title fields you use
+
+Why it matters:
+
+| Export path | Caption | Keywords |
+|---|---|---|
+| Export Photos… with Include ticked | ✔ XMP `dc:description` | ✔ XMP `dc:subject` |
+| Export Unmodified Original | usually dropped | usually dropped |
+| Drag from Photos to Finder | dropped | dropped |
+
+Captions are read as `sourceCaption`. A caption segment that exactly matches a
+known artist name or alias links to that artist automatically; the rest is kept
+as source text with a warning. Keywords become tags, and the scaffolder asks
+whether to import them.
+
+What the export cannot provide, and where it comes from instead:
+
+| Metadata | Source |
+|---|---|
+| capture time | EXIF `DateTimeOriginal`, or `takenAt` in `photos.yml` |
+| caption / artist hint | XMP `dc:description` → `sourceCaption`, then prompt or `photos.yml` |
+| keywords / tags | XMP `dc:subject`, then prompt or `photos.yml` |
+| gallery, visit, exhibition | prompt or `photos.yml` |
+| work title and date | `photos.yml` only |
+| alt text | `photos.yml` only |
+
+HEIC, TIFF, GIF and video are listed as warnings and not imported. If captions
+are missing from the exported files, the export path — not the script — dropped
+them: check a file with `exiftool <file> | grep -i description` before
+re-exporting, and if captions are unavailable, put the artist in `photos.yml`
+or answer the prompts.
 
 ### `photos.yml`
 
