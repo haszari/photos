@@ -73,7 +73,7 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 			<div class="photo-meta__box">
 				{
 					relations.artists.length > 0 && (
-						<p class="photo-meta__line">
+						<p class="photo-meta__line photo-meta__line--artist">
 							{relations.artists.map((artist, index) => (
 								<>
 									{index > 0 && ' '}
@@ -85,12 +85,14 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 				}
 				{
 					relations.works.length > 0 && (
-						<p class="photo-meta__line photo-meta__line--muted">
+						<p class="photo-meta__line photo-meta__line--muted photo-meta__line--work">
 							{relations.works.map((work, index) => (
 								<>
 									{index > 0 && ' '}
 									<a href={route(`works/${work.id}/`)}>{work.data.title}</a>
-									{work.data.date ? ` ${work.data.date}` : ''}
+									{work.data.date && (
+										<span class="photo-meta__year">{` ${work.data.date}`}</span>
+									)}
 								</>
 							))}
 						</p>

@@ -245,6 +245,21 @@ p {
 	margin: 0;
 }
 
+/* Artist is the headline of the card, work next, year back at text size. */
+.photo-meta__line--artist {
+	font-size: 1.2rem;
+	line-height: 1.25;
+}
+
+.photo-meta__line--work {
+	font-size: 0.96rem;
+	line-height: 1.3;
+}
+
+.photo-meta__year {
+	font-size: 0.8rem;
+}
+
 .photo-meta__line--muted {
 	color: var(--ink-muted);
 }
