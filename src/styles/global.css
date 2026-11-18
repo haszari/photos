@@ -222,12 +222,19 @@ p {
 	font-size: 1.5rem;
 }
 
+/* Keep each artist name intact; wrap between names first. */
+.photo-meta__line--artist a {
+	white-space: nowrap;
+}
+
 .photo-meta__line--work {
 	font-size: 1.15rem;
 }
 
 .photo-meta__year {
 	font-size: 0.8rem;
+	/* Keep a title and its year on the same line. */
+	white-space: nowrap;
 }
 
 /* Hierarchy by size: artist > work > exhibition > gallery > everything else. */
@@ -241,6 +248,8 @@ p {
 
 .photo-meta__date {
 	font-size: 0.8rem;
+	/* A date is a unit: break before it, not through it. */
+	white-space: nowrap;
 }
 
 /* A breath between artist/work, place and tags, as in the sketch. */
