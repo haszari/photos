@@ -93,12 +93,11 @@ body {
 
 a {
 	color: inherit;
-	text-decoration-color: var(--rule);
-	text-underline-offset: 0.2em;
+	text-decoration: none;
 }
 
 a:hover {
-	text-decoration-color: currentColor;
+	color: color-mix(in srgb, currentColor 62%, transparent);
 }
 
 :focus-visible {
@@ -187,11 +186,6 @@ p {
 
 .photo-group__heading a {
 	color: inherit;
-	text-decoration-color: var(--rule);
-}
-
-.photo-group__heading a:hover {
-	text-decoration-color: currentColor;
 }
 
 /* Photo detail */
