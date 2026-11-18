@@ -10,11 +10,21 @@
  *   --visit-date <date>   Default visit date (YYYY-MM-DD)
  *   --tags <a,b>          Default tags for the run
  *   --manifest <file>     Metadata file (defaults to <source>/photos.yml)
+ *   --no-save             Do not write prompted answers back to the manifest
  *   --yes                 Accept the plan without confirming
  *   --dry-run             Print the plan and exit
  *
- * Images are copied unchanged. A metadata sidecar is written only when there is
- * metadata for that image. Nothing is ever overwritten.
+ * Images are copied unchanged. Prompts ask for the directory date, gallery,
+ * visit date and tags unless flags or `photos.yml` already answer them (skip
+ * prompts with --yes). Prompted answers are saved back into `photos.yml`, so a
+ * run can be aborted, the manifest edited by hand, then re-run: imported
+ * images are recognised by content hash, and existing sidecars only gain keys
+ * they are missing.
+ *
+ * A metadata sidecar is written only when there is information worth keeping —
+ * artist, work, tags, caption, alt text, visit, exhibition, or a note. A
+ * capture time or source filename alone is not enough. Nothing is ever
+ * overwritten.
  */
 import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -49,6 +59,7 @@ const options = {
 	manifest: undefined,
 	yes: false,
 	dryRun: false,
+	save: true,
 };
 
 for (let index = 0; index < argv.length; index += 1) {
@@ -59,6 +70,7 @@ for (let index = 0; index < argv.length; index += 1) {
 	else if (arg === '--visit-date') options.visitDate = next();
 	else if (arg === '--tags') options.tags = splitList(next());
 	else if (arg === '--manifest') options.manifest = next();
+	else if (arg === '--no-save') options.save = false;
 	else if (arg === '--yes' || arg === '-y') options.yes = true;
 	else if (arg === '--dry-run') options.dryRun = true;
 	else if (arg === '--help' || arg === '-h') {
@@ -149,6 +161,7 @@ async function walkMarkdown(directory) {
 const plan = {
 	images: [],
 	sidecars: [],
+	sidecarUpdates: [],
 	entities: [],
 	skipped: [],
 	warnings: [],
@@ -328,20 +341,79 @@ if (!runDatestamp) {
 }
 
 const galleryName = options.gallery ?? manifestVisit.gallery;
-const runGallery = resolveGallery(galleryName);
+let runGalleryName = galleryName;
+let runGallery = resolveGallery(galleryName);
 const runTags = [...options.tags, ...(manifestDefaults.tags ?? [])];
 
-// --- Build the plan -------------------------------------------------------
+// --- Prompts --------------------------------------------------------------
 
 const prompt = createInterface({ input: process.stdin, output: process.stdout });
+const interactive = !options.yes && Boolean(process.stdin.isTTY);
 
 if (!runDatestamp) {
+	if (!interactive) {
+		throw new Error(
+			'No date found. Pass --date yyyymmdd, or run without --yes to be prompted.',
+		);
+	}
 	const answer = await prompt.question('Directory date for this run (YYYYMMDD): ');
 	runDatestamp = answer.trim();
 }
 const datestamp = runDatestamp;
 if (!parseDatestamp(datestamp)) {
 	throw new Error(`Invalid date "${datestamp}". Expected YYYYMMDD.`);
+}
+
+const defaultVisitDate = isoFromDatestamp(datestamp);
+let importKeywords = manifestDefaults.keywords !== false;
+
+if (interactive) {
+	if (!runGallery) {
+		const answer = await prompt.question('Gallery (blank for none): ');
+		if (answer.trim()) {
+			runGalleryName = answer.trim();
+			runGallery = resolveGallery(runGalleryName);
+		}
+	}
+	if (!runVisitDate) {
+		const answer = await prompt.question(`Visit date [${defaultVisitDate}]: `);
+		runVisitDate = answer.trim() || defaultVisitDate;
+	}
+	if (runTags.length === 0) {
+		const answer = await prompt.question('Tags, comma-separated (blank for none): ');
+		runTags.push(...splitList(answer));
+	}
+	if (manifestDefaults.keywords === undefined) {
+		const answer = await prompt.question('Import Photos keywords as tags? [Y/n] ');
+		importKeywords = !/^n/i.test(answer.trim());
+	}
+
+	// Keep prompted answers so the next run has them, and so they can be edited
+	// by hand between an abort and a re-run.
+	if (options.save) {
+		const nextManifest = {
+			...manifest,
+			visit: {
+				...(manifest.visit ?? {}),
+				...(runGalleryName ? { gallery: runGalleryName } : {}),
+				...(runVisitDate ? { visitedAt: runVisitDate } : {}),
+			},
+			defaults: {
+				...(manifest.defaults ?? {}),
+				...(runTags.length > 0 ? { tags: runTags } : {}),
+				keywords: importKeywords,
+			},
+		};
+		if (options.dryRun) {
+			console.log(`\nWould save answers to ${path.relative(ROOT, manifestPath)}:`);
+			for (const line of stringifyYaml(nextManifest).trimEnd().split('\n')) {
+				console.log(`  ${line}`);
+			}
+		} else {
+			await writeFile(manifestPath, stringifyYaml(nextManifest));
+			console.log(`\nSaved answers to ${path.relative(ROOT, manifestPath)}`);
+		}
+	}
 }
 
 const year = datestamp.slice(0, 4);
@@ -368,20 +440,49 @@ for (const name of images) {
 	}
 
 	let caption;
-	let subjectTags = [];
+	let keywordTags = [];
 	try {
-		const exif = await exifr.parse(sourcePath, { xmp: true, iptc: true });
-		caption = exif?.Description ?? exif?.Caption ?? exif?.ImageDescription ?? undefined;
-		const subject = exif?.Subject ?? exif?.Keywords;
-		if (Array.isArray(subject)) subjectTags = subject.map(String);
-		else if (typeof subject === 'string') subjectTags = [subject];
+		const exif = await exifr.parse(sourcePath, { xmp: true, iptc: true, exif: true, tiff: true });
+		caption = exif?.ImageDescription ?? exif?.Description ?? exif?.Caption ?? undefined;
+		const subject = exif?.Subject ?? exif?.subject ?? exif?.Keywords;
+		if (Array.isArray(subject)) keywordTags = subject.map(String);
+		else if (typeof subject === 'string') keywordTags = [subject];
 	} catch {
 		// No readable IPTC/XMP.
 	}
 
-	const artistsForPhoto = (metadata.artists ?? manifestDefaults.artists ?? []).map((artist) =>
+	const captionText =
+		typeof caption === 'string' ? caption.replace(/[|\s]+$/u, '').trim() : undefined;
+
+	// A caption segment that exactly matches a known artist name or alias is
+	// linked automatically. Everything else stays source text.
+	const captionSegments = (captionText ?? '')
+		.split('|')
+		.map((part) => part.trim())
+		.filter(Boolean);
+	const captionArtists = captionSegments
+		.map((part) =>
+			artists.find(
+				(artist) =>
+					artist.data.name?.toLowerCase() === part.toLowerCase() ||
+					(artist.data.aliases ?? []).some(
+						(alias) => alias.toLowerCase() === part.toLowerCase(),
+					),
+			),
+		)
+		.filter(Boolean);
+	if (captionArtists.length === 0 && captionSegments.length > 0) {
+		plan.warnings.push(`${name}: caption kept as source text: ${captionSegments.join(' | ')}`);
+	}
+
+	const manifestArtists = (metadata.artists ?? manifestDefaults.artists ?? []).map((artist) =>
 		resolveArtist(artist),
 	);
+	const artistIds = [
+		...new Set(
+			[...manifestArtists, ...captionArtists].filter(Boolean).map((artist) => artist.id),
+		),
+	];
 	const workEntries = (metadata.works ?? manifestDefaults.works ?? []).map((work) =>
 		resolveWork(work, metadata.artists ?? manifestDefaults.artists ?? []),
 	);
@@ -406,52 +507,96 @@ for (const name of images) {
 	const tags = resolveTags([
 		...runTags,
 		...(metadata.tags ?? []),
-		...subjectTags,
+		...(importKeywords ? keywordTags : []),
 	]);
 
 	const baseFilename = `${datestamp}-${safeStem}`;
 	let filename = `${baseFilename}${extension}`;
 	let counter = 2;
+	let alreadyImported = false;
 	// Collisions are resolved against the destination, never by overwriting.
 	for (;;) {
+		const candidate = path.join(destinationDir, filename);
+		let digest;
 		try {
-			await readFile(path.join(destinationDir, filename));
+			digest = await hashFile(candidate);
 		} catch {
-			break;
+			break; // free slot
 		}
-		const same = await hashFile(path.join(destinationDir, filename)).catch(() => undefined);
-		if (same && same === (await hashFile(sourcePath))) {
-			plan.skipped.push(`${filename} (identical)`);
-			filename = undefined;
+		if (digest === (await hashFile(sourcePath))) {
+			alreadyImported = true;
 			break;
 		}
 		filename = `${baseFilename}-${counter}${extension}`;
 		counter += 1;
 	}
-	if (filename === undefined) continue;
 
-	const imageId = `${year}/${datestamp}/${path.basename(filename, extension)}`;
-	plan.images.push({ sourcePath, destination: path.join(destinationDir, filename) });
+	const sidecarStem = path.basename(filename, extension);
+	const sidecarFile = path.join(destinationDir, `${sidecarStem}.md`);
+	const imageId = `${year}/${datestamp}/${sidecarStem}`;
+
+	if (alreadyImported) {
+		plan.skipped.push(`${filename} (already imported)`);
+	} else {
+		plan.images.push({ sourcePath, destination: path.join(destinationDir, filename) });
+	}
 
 	const sidecarData = {};
 	if (takenAt) sidecarData.takenAt = new Date(takenAt).toISOString();
-	if (artistsForPhoto.length > 0) sidecarData.artists = artistsForPhoto.map((artist) => artist.id);
+	if (artistIds.length > 0) sidecarData.artists = artistIds;
 	if (workEntries.length > 0) sidecarData.works = workEntries.map((work) => work.id);
 	if (metadata.alt) sidecarData.alt = String(metadata.alt);
 	if (tags.length > 0) sidecarData.tags = tags;
 	sidecarData.sourceFilename = name;
-	if (caption) sidecarData.sourceCaption = String(caption).trim();
-
-	const hasMetadata =
-		Object.keys(sidecarData).filter((key) => key !== 'sourceFilename').length > 0 ||
-		metadata.note;
-	if (!hasMetadata) continue;
+	if (captionText) sidecarData.sourceCaption = captionText;
 
 	// Per the precedence rule, gallery only appears on a photo with no visit.
 	if (visit) sidecarData.visit = visit.id;
 
+	// A sidecar exists only for information worth keeping. A capture time or a
+	// source filename alone is not worth a file: both are derivable elsewhere.
+	const usefulKeys = [
+		'artists',
+		'works',
+		'tags',
+		'alt',
+		'sourceCaption',
+		'visit',
+		'gallery',
+		'exhibition',
+	];
+	const hasMetadata =
+		usefulKeys.some((key) => sidecarData[key] !== undefined && sidecarData[key] !== '') ||
+		Boolean(metadata.note);
+
+	let existingSidecar;
+	try {
+		existingSidecar = await readFrontmatter(sidecarFile);
+	} catch {
+		existingSidecar = undefined;
+	}
+
+	if (existingSidecar) {
+		// Existing sidecars only gain keys they are missing. Hand edits win.
+		const added = Object.keys(sidecarData).filter(
+			(key) => existingSidecar.data[key] === undefined,
+		);
+		if (added.length > 0) {
+			plan.sidecarUpdates.push({
+				file: sidecarFile,
+				id: imageId,
+				data: { ...sidecarData, ...existingSidecar.data },
+				added,
+				body: existingSidecar.body,
+			});
+		}
+		continue;
+	}
+
+	if (!hasMetadata) continue;
+
 	plan.sidecars.push({
-		file: path.join(destinationDir, `${path.basename(filename, extension)}.md`),
+		file: sidecarFile,
 		id: imageId,
 		data: sidecarData,
 		body: metadata.note ? `${String(metadata.note).trim()}\n` : '',
@@ -467,7 +612,9 @@ function isoFromDatestamp(value) {
 console.log(`\nSource:  ${path.relative(ROOT, sourceDir)}`);
 console.log(`Target:  ${path.relative(ROOT, destinationDir)}`);
 console.log(`Images:  ${plan.images.length} to copy, ${plan.skipped.length} skipped`);
-console.log(`Sidecars: ${plan.sidecars.length}`);
+console.log(
+	`Sidecars: ${plan.sidecars.length} new, ${plan.sidecarUpdates.length} updated (${plan.images.length - plan.sidecars.length} images need none)`,
+);
 console.log(`Records:  ${plan.entities.length}`);
 
 if (plan.entities.length > 0) {
@@ -480,6 +627,12 @@ if (plan.sidecars.length > 0) {
 		console.log(`  ${path.relative(ROOT, sidecar.file)}`);
 	}
 }
+if (plan.sidecarUpdates.length > 0) {
+	console.log('\nSidecar updates:');
+	for (const update of plan.sidecarUpdates) {
+		console.log(`  ${path.relative(ROOT, update.file)} (adds ${update.added.join(', ')})`);
+	}
+}
 if (plan.skipped.length > 0) {
 	console.log('\nSkipped:');
 	for (const skipped of plan.skipped) console.log(`  ${skipped}`);
@@ -489,8 +642,34 @@ if (plan.warnings.length > 0) {
 	for (const warning of plan.warnings) console.log(`  ${warning}`);
 }
 
+if (
+	options.dryRun &&
+	(plan.sidecars.length > 0 || plan.sidecarUpdates.length > 0)
+) {
+	console.log('\nSidecar preview:');
+	for (const sidecar of [...plan.sidecars, ...plan.sidecarUpdates]) {
+		console.log(`  ${path.relative(ROOT, sidecar.file)}`);
+		for (const line of stringifyYaml(sidecar.data).trimEnd().split('\n')) {
+			console.log(`    ${line}`);
+		}
+		if (sidecar.body) console.log(`    ${sidecar.body.trim()}`);
+	}
+}
+
 if (options.dryRun) {
 	console.log('\nDry run: nothing written.');
+	prompt.close();
+	process.exit(0);
+}
+
+const hasWork =
+	plan.images.length > 0 ||
+	plan.sidecars.length > 0 ||
+	plan.sidecarUpdates.length > 0 ||
+	plan.entities.length > 0;
+
+if (!hasWork) {
+	console.log('\nNothing to import.');
 	prompt.close();
 	process.exit(0);
 }
@@ -520,6 +699,12 @@ for (const sidecar of plan.sidecars) {
 	});
 }
 
+for (const update of plan.sidecarUpdates) {
+	const frontmatter = stringifyYaml(update.data).trimEnd();
+	const body = (update.body ?? '').trim();
+	await writeFile(update.file, `---\n${frontmatter}\n---\n${body ? `\n${body}\n` : ''}`);
+}
+
 const written = new Set(plan.entities);
 for (const entity of plan.entities) {
 	const [collection, ...rest] = entity.split('/');
@@ -541,4 +726,6 @@ for (const entity of plan.entities) {
 	});
 }
 
-console.log(`\nDone. ${written.size} records, ${plan.images.length} images, ${plan.sidecars.length} sidecars.`);
+console.log(
+	`\nDone. ${written.size} records, ${plan.images.length} images, ${plan.sidecars.length} new sidecars, ${plan.sidecarUpdates.length} updated.`,
+);

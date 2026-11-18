@@ -90,6 +90,27 @@ Constants live in `src/lib/license.ts`. Every page emits `<link rel="license">`,
 
 Per-photo creator attribution is not implemented yet. When other people commit photos, the intended rule is to credit the git committer of each image, so a per-photo `credit` field can be derived from history rather than typed by hand.
 
+### Incremental runs
+
+The loop is: run → review → abort or accept → edit `photos.yml` → run again.
+
+```sh
+npm run scaffold:photos -- ./incoming/20261118 --dry-run   # review plan, no writes
+npm run scaffold:photos -- ./incoming/20261118             # prompts + import
+```
+
+- Missing answers are prompted: directory date, gallery, visit date, tags, whether to import Photos keywords.
+- Prompted answers are written back into `./incoming/20261118/photos.yml` before the confirm step, so an aborted run still keeps your answers. Disable with `--no-save`.
+- Already-imported images are recognised by content hash and skipped, but their metadata is still processed.
+- An existing sidecar only gains keys it is missing. Hand edits are never overwritten.
+- Nothing left to do prints `Nothing to import` and exits 0.
+
+### When no sidecar is written
+
+A sidecar is created only for information worth keeping: `artists`, `works`, `tags`, `alt`, `sourceCaption`, `visit`, `gallery`, `exhibition`, or a note. A capture time or source filename on its own is not enough — both are recoverable, so those photos get an image and no Markdown file.
+
+Captions: Apple's `Export Photos…` writes the caption to XMP `dc:description`, which appears as `sourceCaption`. Segments that exactly match a known artist name or alias are linked automatically; anything else stays as source text with a warning. `Export Unmodified Original` and drag-and-drop can drop captions entirely.
+
 ## Guard
 
 `npm run build` runs `scripts/check-photo-access.mjs`, which fails if
