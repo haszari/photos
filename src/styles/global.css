@@ -3,12 +3,11 @@
 	--wall-right: #c4c1ba;
 	--floor: #8e8580;
 	--floor-band: 18vh;
-	/* Body text is near-black with a green cast; headings sit just lighter. */
+	/* Text is one of three colours: grey-black headings, green-black links,
+	   almost-black everything else. */
 	--ink: #0b0f0d;
-	--ink-heading: #151b18;
-	/* Links: green-black, brighter than body text. */
+	--ink-heading: #262b28;
 	--link: #0e3020;
-	--ink-muted: #545c56;
 	--rule: color-mix(in srgb, var(--ink) 18%, transparent);
 	--gap: clamp(0.75rem, 1.5vw, 1.5rem);
 	--page-pad: clamp(1rem, 2.5vw, 2.5rem);
@@ -236,10 +235,6 @@ p {
 	font-size: 0.8rem;
 }
 
-.photo-meta__line--muted {
-	color: var(--ink-muted);
-}
-
 /* A breath between artist/work, place and tags, as in the sketch. */
 .photo-meta__line--place {
 	margin-top: 0.53rem;
@@ -248,12 +243,10 @@ p {
 .photo-meta__line--tags {
 	margin-top: 0.53rem;
 	font-size: 0.75rem;
-	color: var(--ink-muted);
 }
 
 .photo-meta__note {
 	font-size: 0.8rem;
-	color: var(--ink-muted);
 }
 
 @media (max-width: 720px) {
@@ -287,7 +280,6 @@ p {
 }
 
 .entity-list .count {
-	color: var(--ink-muted);
 	font-size: 0.8rem;
 }
 
@@ -311,7 +303,6 @@ p {
 	flex-wrap: wrap;
 	gap: 0.35rem 1rem;
 	font-size: 0.8rem;
-	color: var(--ink-muted);
 }
 
 .visually-hidden {
