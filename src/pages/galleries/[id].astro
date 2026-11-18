@@ -44,14 +44,16 @@ const hasBody = Boolean(gallery.body?.trim());
 			groups.map((group) => (
 				<PhotoGroup photos={group.photos}>
 					<Fragment slot="heading">
-						<time datetime={group.date.toISOString().slice(0, 10)}>
-							{group.visit ? (
-								<a href={route(`visits/${group.visit.id}/`)}>{formatDate(group.date)}</a>
-							) : (
-								formatDate(group.date)
-							)}
-						</time>
-						{group.visit?.data.title && ` ${group.visit.data.title}`}
+						<span>
+							<time datetime={group.date.toISOString().slice(0, 10)}>
+								{group.visit ? (
+									<a href={route(`visits/${group.visit.id}/`)}>{formatDate(group.date)}</a>
+								) : (
+									formatDate(group.date)
+								)}
+							</time>
+						</span>
+						{group.visit?.data.title && <span>{group.visit.data.title}</span>}
 					</Fragment>
 				</PhotoGroup>
 			))

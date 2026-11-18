@@ -132,6 +132,10 @@ p {
 
 .photo-group__heading {
 	margin-top: calc(var(--gap) / 2);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.25rem 0.6rem;
 	font-size: 1rem;
 	/* 400 so the date link renders with the same weight, and therefore the same
 	   apparent green, as links elsewhere. */
