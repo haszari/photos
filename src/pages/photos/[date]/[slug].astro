@@ -35,9 +35,7 @@ const heading = workTitle ?? formatDate(photo.date, 'long');
 const pageTitle = workTitle ? `${workTitle} — ${formatDate(photo.date)}` : formatDate(photo.date, 'long');
 const alt = data?.alt ?? data?.sourceCaption ?? '';
 const description = data?.sourceCaption ?? alt;
-const visitLabel = relations.visit?.data.title
-	? relations.visit.data.title
-	: formatDate(relations.visit?.data.visitedAt ?? photo.date, 'long');
+const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 ---
 
 <Base title={pageTitle} description={description || undefined} path={photoHref(photo)}>
@@ -71,97 +69,66 @@ const visitLabel = relations.visit?.data.title
 		</figure>
 
 		<aside class="photo-meta">
-			<dl>
-				{
-					relations.works.length > 0 && (
-						<>
-							<dt>Work</dt>
-							{relations.works.map((work) => (
-								<dd>
-									<a href={route(`works/${work.id}/`)}>{work.data.title}</a>
-									{work.data.date ? `, ${work.data.date}` : ''}
-								</dd>
-							))}
-						</>
-					)
-				}
+			<div class="photo-meta__box">
 				{
 					relations.artists.length > 0 && (
-						<>
-							<dt>Artist</dt>
-							{relations.artists.map((artist) => (
-								<dd>
+						<p class="photo-meta__line">
+							{relations.artists.map((artist, index) => (
+								<>
+									{index > 0 && ', '}
 									<a href={route(`artists/${artist.id}/`)}>{artist.data.name}</a>
-								</dd>
+								</>
 							))}
-						</>
+						</p>
 					)
 				}
 				{
-					relations.gallery && (
-						<>
-							<dt>Gallery</dt>
-							<dd>
+					relations.works.length > 0 && (
+						<p class="photo-meta__line photo-meta__line--muted">
+							{relations.works.map((work, index) => (
+								<>
+									{index > 0 && ' · '}
+									<a href={route(`works/${work.id}/`)}>{work.data.title}</a>
+									{work.data.date ? `, ${work.data.date}` : ''}
+								</>
+							))}
+						</p>
+					)
+				}
+				{
+					(relations.gallery || placeDate) && (
+						<p class="photo-meta__line photo-meta__line--muted">
+							{relations.gallery ? (
 								<a href={route(`galleries/${relations.gallery.id}/`)}>
 									{relations.gallery.data.name}
 								</a>
-							</dd>
-						</>
-					)
-				}
-				{
-					relations.exhibition && (
-						<>
-							<dt>Exhibition</dt>
-							<dd>
-								<a href={route(`exhibitions/${relations.exhibition.id}/`)}>
-									{relations.exhibition.data.title}
-								</a>
-							</dd>
-						</>
-					)
-				}
-				{
-					relations.visit && (
-						<>
-							<dt>Visit</dt>
-							<dd>
-								<a href={route(`visits/${relations.visit.id}/`)}>
-									{visitLabel}
-								</a>
-							</dd>
-						</>
-					)
-				}
-				{
-					data?.takenAt && (
-						<>
-							<dt>Taken</dt>
-							<dd>{formatDate(data.takenAt, 'long')}</dd>
-						</>
+							) : (
+								<span>{relations.visit?.data.title ?? 'Visit'}</span>
+							)}
+							{placeDate && <>, {formatDate(placeDate)}</>}
+						</p>
 					)
 				}
 				{
 					tags.length > 0 && (
-						<>
-							<dt>Tags</dt>
-							<dd>
-								{tags.map((tag, index) => (
-									<>
-										{index > 0 && ', '}
-										<a href={route(`tags/${tag!.slug}/`)}>{tag!.label}</a>
-									</>
-								))}
-							</dd>
-						</>
+						<p class="photo-meta__line photo-meta__line--tags">
+							{tags.map((tag, index) => (
+								<>
+									{index > 0 && ' '}
+									<a href={route(`tags/${tag!.slug}/`)}>{tag!.label}</a>
+								</>
+							))}
+						</p>
 					)
 				}
-			</dl>
-			{note && note.Content && (
-				<div class="prose">
-					<note.Content />
-				</div>
-			)}
+				{
+					note && note.Content && (
+						<div class="prose photo-meta__note">
+							<note.Content />
+						</div>
+					)
+				}
+			</div>
 			<p class="visually-hidden">
 				<a href={route('')}>All photos</a>
 			</p>

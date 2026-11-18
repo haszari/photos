@@ -170,7 +170,7 @@ p {
 
 /* Date / visit heading below a photo group, in the grid's inset. */
 .photo-group + .photo-group {
-	margin-top: clamp(2rem, 5vw, 3.5rem);
+	margin-top: clamp(1rem, 2.5vw, 1.75rem);
 }
 
 .photo-group__heading {
@@ -229,21 +229,34 @@ p {
 	line-height: 1.5;
 }
 
-.photo-meta dl {
-	margin: 0;
-	display: grid;
-	gap: 0.35rem;
+/* One white card, no field labels: artist, work, place, tags, note. */
+.photo-meta__box {
+	padding: 0.9rem 1rem;
+	background-color: #fff;
+	display: flex;
+	flex-direction: column;
+	gap: 0.55rem;
 }
 
-.photo-meta dt {
-	font-size: 0.7rem;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
+.photo-meta__line {
+	margin: 0;
+}
+
+.photo-meta__line--muted {
 	color: var(--ink-muted);
 }
 
-.photo-meta dd {
-	margin: 0 0 0.35rem;
+.photo-meta__line--tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.15rem 0.6rem;
+	font-size: 0.75rem;
+	color: var(--ink-muted);
+}
+
+.photo-meta__note {
+	font-size: 0.8rem;
+	color: var(--ink-muted);
 }
 
 @media (max-width: 720px) {
