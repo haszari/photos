@@ -7,7 +7,7 @@
 	--ink: #0b0f0d;
 	--ink-heading: #151b18;
 	/* Links: green-black, brighter than body text. */
-	--link: #1f5c3a;
+	--link: #17452c;
 	--ink-muted: #6d635c;
 	--rule: color-mix(in srgb, var(--ink) 18%, transparent);
 	--gap: clamp(0.75rem, 1.5vw, 1.5rem);
