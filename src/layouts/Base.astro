@@ -3,6 +3,7 @@ import { Font } from 'astro:assets';
 import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import { url } from '../lib/url';
+import RoomCorner from '../components/RoomCorner.astro';
 import { CREATOR, PHOTO_LICENSE, SITE_URL } from '../lib/license';
 
 interface Props {
@@ -44,12 +45,7 @@ const siteJsonLd = {
 		<meta name="generator" content={Astro.generator} />
 	</head>
 	<body>
-		<div class="room" aria-hidden="true">
-			<div class="room__wall room__wall--left"></div>
-			<div class="room__wall room__wall--right"></div>
-			<div class="room__floor wedge"></div>
-			<div class="room__floor band"></div>
-		</div>
+		<RoomCorner />
 		<slot />
 	</body>
 </html>

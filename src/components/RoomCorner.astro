@@ -1,0 +1,70 @@
+---
+/**
+ * Orthographic room corner: two wall planes meeting at a 50% seam, plus a floor
+ * drawn as a wedge over a full-width band.
+ *
+ * The wedge height is derived from the horizontal run (`50vw`) with `tan()`, so
+ * the slope stays at `angle` degrees at every viewport size instead of bending
+ * with the aspect ratio. `min(…, 55vh)` keeps it from swallowing short windows.
+ */
+interface Props {
+	/** Slope of the floor wedge, in degrees. */
+	angle?: number;
+}
+
+const { angle = 20 } = Astro.props;
+---
+
+<div class="room" aria-hidden="true" style={`--corner-angle: ${angle}deg`}>
+	<div class="room__wall room__wall--left"></div>
+	<div class="room__wall room__wall--right"></div>
+	<div class="room__floor room__floor--wedge"></div>
+	<div class="room__floor room__floor--band"></div>
+</div>
+
+<style>
+	.room {
+		position: fixed;
+		inset: 0;
+		z-index: -1;
+		overflow: hidden;
+		background-color: var(--wall-left);
+		--floor-band: clamp(4rem, 12vmax, 12rem);
+	}
+
+	.room__wall {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 50%;
+	}
+
+	.room__wall--left {
+		left: 0;
+		background-color: var(--wall-left);
+	}
+
+	.room__wall--right {
+		left: 50%;
+		background-color: var(--wall-right);
+	}
+
+	.room__floor {
+		position: absolute;
+		left: 0;
+		right: 0;
+		background-color: var(--floor);
+	}
+
+	/* Apex on the seam, base on the top edge of the band. */
+	.room__floor--wedge {
+		bottom: var(--floor-band);
+		height: min(55vh, calc(50vw * tan(var(--corner-angle, 20deg))));
+		clip-path: polygon(50% 0, 100% 100%, 0 100%);
+	}
+
+	.room__floor--band {
+		bottom: 0;
+		height: var(--floor-band);
+	}
+</style>
