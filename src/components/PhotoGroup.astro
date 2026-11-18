@@ -1,0 +1,22 @@
+---
+import PhotoGrid from './PhotoGrid.astro';
+import type { Photo } from '../lib/photos';
+
+interface Props {
+	photos: Photo[];
+	/** Heading level so group headings nest under the page h1. */
+	headingLevel?: 2 | 3;
+	/** Extra class for page-specific tweaks. */
+	class?: string;
+}
+
+const { photos, headingLevel = 2, class: className } = Astro.props;
+const Heading = `h${headingLevel}` as 'h2' | 'h3';
+---
+
+<section class:list={['photo-group', className]}>
+	<PhotoGrid photos={photos} />
+	<Heading class="photo-group__heading">
+		<slot name="heading" />
+	</Heading>
+</section>

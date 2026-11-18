@@ -1,13 +1,12 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import PhotoGrid from '../../components/PhotoGrid.astro';
+import PhotoGroup from '../../components/PhotoGroup.astro';
 import { getIndex } from '../../lib/content';
 import { groupPhotos } from '../../lib/groups';
 import { photosForGallery } from '../../lib/queries';
 import { formatDate } from '../../lib/format';
 import { route } from '../../lib/url';
-import { gridStyle } from '../../lib/layout';
 
 export async function getStaticPaths() {
 	const { galleries } = await getIndex();
@@ -38,12 +37,11 @@ const facts = [gallery.data.location, gallery.data.city, gallery.data.country].f
 			}
 		</header>
 
-		<div class="gallery">
+		<div class="stack">
 			{
 				groups.map((group) => (
-					<section style={gridStyle(group.photos.length)}>
-						<PhotoGrid photos={group.photos} />
-						<p class="group-caption">
+					<PhotoGroup photos={group.photos}>
+						<Fragment slot="heading">
 							<time datetime={group.date.toISOString().slice(0, 10)}>{formatDate(group.date)}</time>
 							{group.visit?.data.title && ` — ${group.visit.data.title}`}
 							{group.visit && (
@@ -52,8 +50,8 @@ const facts = [gallery.data.location, gallery.data.city, gallery.data.country].f
 									<a href={route(`visits/${group.visit.id}/`)}>visit</a>
 								</>
 							)}
-						</p>
-					</section>
+						</Fragment>
+					</PhotoGroup>
 				))
 			}
 		</div>

@@ -84,8 +84,11 @@ body {
 	background-color: var(--floor);
 }
 
+/* Every page shares one centred container, so headings, prose and grids line up. */
 .page {
-	padding: var(--page-pad);
+	width: var(--grid-width);
+	margin-inline: auto;
+	padding-block: var(--page-pad);
 }
 
 a {
@@ -139,7 +142,7 @@ p {
 .masonry {
 	columns: var(--masonry-columns, 3);
 	column-gap: var(--gap);
-	width: var(--grid-width);
+	width: 100%;
 }
 
 .masonry__item {
@@ -165,38 +168,42 @@ p {
 	}
 }
 
-/* Date / visit caption below a photo group. */
-.group-caption {
-	width: var(--grid-width);
-	margin-inline: auto;
+/* Date / visit heading below a photo group, in the grid's inset. */
+.photo-group + .photo-group {
+	margin-top: clamp(2rem, 5vw, 3.5rem);
+}
+
+.photo-group__heading {
 	margin-top: calc(var(--gap) / 2);
-	font-size: 0.8rem;
+	font-size: 1rem;
+	font-weight: 500;
 	letter-spacing: 0.01em;
-	color: var(--ink-muted);
-}
-
-.group-caption time {
-	font-variant-numeric: tabular-nums;
-}
-
-.group-caption a {
 	color: var(--ink);
 }
 
-.gallery {
-	display: flex;
-	flex-direction: column;
-	gap: clamp(2rem, 5vw, 4rem);
+.photo-group__heading time {
+	font-variant-numeric: tabular-nums;
+}
+
+.photo-group__heading a {
+	color: inherit;
+	text-decoration-color: var(--rule);
+}
+
+.photo-group__heading a:hover {
+	text-decoration-color: currentColor;
 }
 
 /* Photo detail */
 .photo-page {
+	width: var(--grid-width);
+	margin-inline: auto;
 	min-height: 100svh;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: clamp(1rem, 3vw, 3rem);
-	padding: var(--page-pad);
+	padding-block: var(--page-pad);
 }
 
 .photo-page__figure {

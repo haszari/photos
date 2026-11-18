@@ -1,24 +1,22 @@
 ---
 import Base from '../layouts/Base.astro';
-import PhotoGrid from '../components/PhotoGrid.astro';
+import PhotoGroup from '../components/PhotoGroup.astro';
 import { getPhotos } from '../lib/photos';
 import { groupPhotos } from '../lib/groups';
 import { formatDate } from '../lib/format';
 import { route } from '../lib/url';
-import { gridStyle } from '../lib/layout';
 
 const photos = await getPhotos();
 const groups = await groupPhotos(photos);
 ---
 
 <Base>
-	<main class="page gallery">
+	<main class="page stack">
 		<h1 class="visually-hidden">All photos</h1>
 		{
 			groups.map((group) => (
-				<section style={gridStyle(group.photos.length)}>
-					<PhotoGrid photos={group.photos} />
-					<p class="group-caption">
+				<PhotoGroup photos={group.photos}>
+					<Fragment slot="heading">
 						<time datetime={group.date.toISOString().slice(0, 10)}>{formatDate(group.date)}</time>
 						{group.gallery && (
 							<>
@@ -27,8 +25,8 @@ const groups = await groupPhotos(photos);
 							</>
 						)}
 						{!group.gallery && group.visit?.data.title && ` — ${group.visit.data.title}`}
-					</p>
-				</section>
+					</Fragment>
+				</PhotoGroup>
 			))
 		}
 		{photos.length === 0 && <p>No photos yet.</p>}
