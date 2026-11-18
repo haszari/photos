@@ -238,7 +238,7 @@ p {
 	background-color: #fff;
 	display: flex;
 	flex-direction: column;
-	gap: 0.55rem;
+	gap: 0.73rem;
 }
 
 .photo-meta__line {
@@ -285,11 +285,11 @@ p {
 
 /* A breath between artist/work, place and tags, as in the sketch. */
 .photo-meta__line--place {
-	margin-top: 0.4rem;
+	margin-top: 0.53rem;
 }
 
 .photo-meta__line--tags {
-	margin-top: 0.4rem;
+	margin-top: 0.53rem;
 	font-size: 0.75rem;
 	color: var(--ink-muted);
 }
