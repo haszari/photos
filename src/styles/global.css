@@ -247,12 +247,12 @@ p {
 
 /* Artist is the headline of the card, work next, year back at text size. */
 .photo-meta__line--artist {
-	font-size: 1.2rem;
+	font-size: 1.5rem;
 	line-height: 1.25;
 }
 
 .photo-meta__line--work {
-	font-size: 0.96rem;
+	font-size: 1.15rem;
 	line-height: 1.3;
 }
 
@@ -262,11 +262,11 @@ p {
 
 /* Hierarchy by size: artist > work > exhibition > gallery > everything else. */
 .photo-meta__exhibition {
-	font-size: 0.9rem;
+	font-size: 1rem;
 }
 
 .photo-meta__gallery {
-	font-size: 0.85rem;
+	font-size: 0.9rem;
 }
 
 .photo-meta__date {
