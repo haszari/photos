@@ -143,7 +143,8 @@ npm run scaffold:photos -- ./incoming/20261118 --dry-run   # review plan, no wri
 npm run scaffold:photos -- ./incoming/20261118             # prompts + import
 ```
 
-- Missing answers are prompted: directory date, gallery, visit date, tags, whether to import Photos keywords.
+- Missing answers are prompted: directory date (only if EXIF has none), gallery, visit date, tags, whether to import Photos keywords, and which unmatched caption names should become artist records.
+- Caption prompt lists every name in the run's captions that has no artist record: `[Y] all`, `[n] none`, or numbers like `1,3`. Accepted names become `artists/<slug>.md` and are linked in the sidecars; rejected names stay as `sourceCaption` text with a warning.
 - Prompted answers are written back into `./incoming/20261118/photos.yml` before the confirm step, so an aborted run still keeps your answers. Disable with `--no-save`.
 - Already-imported images are recognised by content hash and skipped, but their metadata is still processed.
 - An existing sidecar only gains keys it is missing. Hand edits are never overwritten.
@@ -153,7 +154,7 @@ npm run scaffold:photos -- ./incoming/20261118             # prompts + import
 
 A sidecar is created only for information worth keeping: `artists`, `works`, `tags`, `alt`, `sourceCaption`, `visit`, `gallery`, `exhibition`, or a note. A capture time or source filename on its own is not enough — both are recoverable, so those photos get an image and no Markdown file.
 
-Captions: Apple's `Export Photos…` writes the caption to XMP `dc:description`, which appears as `sourceCaption`. Segments that exactly match a known artist name or alias are linked automatically; anything else stays as source text with a warning. `Export Unmodified Original` and drag-and-drop can drop captions entirely.
+Captions: Apple's `Export Photos…` writes the caption to XMP `dc:description`, which appears as `sourceCaption`. The caption is treated as `Artist | Artist` **only when a segment matches an existing artist name or alias**, or when you accept the create-artists prompt. Anything else stays as source text with a warning — a caption is not assumed to name a person. `Export Unmodified Original` and drag-and-drop can drop captions entirely.
 
 ## Guard
 

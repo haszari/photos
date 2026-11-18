@@ -92,6 +92,18 @@ function helpText(contents) {
 	return contents.slice(start + 3, end).replace(/^ \* ?/gm, '');
 }
 
+function compact(object) {
+	for (const [key, value] of Object.entries(object)) {
+		const emptyObject =
+			value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0;
+		const emptyArray = Array.isArray(value) && value.length === 0;
+		if (value === undefined || value === null || value === '' || emptyObject || emptyArray) {
+			delete object[key];
+		}
+	}
+	return object;
+}
+
 function splitList(value) {
 	return value
 		.split(',')
@@ -206,19 +218,33 @@ function resolveGallery(name) {
 	return { id, created: true };
 }
 
-function resolveArtist(name) {
+function matchArtist(name) {
 	if (!name) return undefined;
 	const slug = slugify(name);
-	const existing = artists.find(
+	return artists.find(
 		(artist) =>
 			artist.id === slug ||
 			artist.data.name?.toLowerCase() === name.toLowerCase() ||
 			(artist.data.aliases ?? []).some((alias) => alias.toLowerCase() === name.toLowerCase()),
 	);
+}
+
+function resolveArtist(name) {
+	if (!name) return undefined;
+	const existing = matchArtist(name);
 	if (existing) return { id: existing.id, created: false };
+	const slug = slugify(name);
 	artists.push({ id: slug, data: { name } });
 	plan.entities.push(`artists/${slug}.md`);
 	return { id: slug, created: true };
+}
+
+/** Caption segments, e.g. `Nigel Wilson | Mary Jane Sneyd` -> two names. */
+function captionSegments(captionText) {
+	return (captionText ?? '')
+		.split('|')
+		.map((part) => part.trim())
+		.filter(Boolean);
 }
 
 function resolveWork(work, fallbackArtists = []) {
@@ -380,6 +406,17 @@ const runTags = [...options.tags, ...(manifestDefaults.tags ?? [])];
 // --- Prompts --------------------------------------------------------------
 
 const prompt = createInterface({ input: process.stdin, output: process.stdout });
+
+async function ask(question) {
+	try {
+		return await prompt.question(question);
+	} catch {
+		console.log('\nAborted.');
+		prompt.close();
+		process.exit(0);
+	}
+}
+
 const interactive = !options.yes && Boolean(process.stdin.isTTY);
 
 const undated = images.filter((name) => !dateFor(name));
@@ -391,7 +428,7 @@ if (undated.length > 0) {
 			`No capture date for: ${undated.join(', ')}. Pass --date yyyymmdd, or set takenAt in photos.yml.`,
 		);
 	}
-	const answer = await prompt.question(
+	const answer = await ask(
 		`No capture date for ${undated.length} photo(s). Date to use (YYYYMMDD): `,
 	);
 	fallbackDatestamp = answer.trim();
@@ -412,7 +449,7 @@ let importKeywords = manifestDefaults.keywords !== false;
 
 if (interactive) {
 	if (!runGallery) {
-		const answer = await prompt.question('Gallery (blank for none): ');
+		const answer = await ask('Gallery (blank for none): ');
 		if (answer.trim()) {
 			runGalleryName = answer.trim();
 			runGallery = resolveGallery(runGalleryName);
@@ -420,37 +457,69 @@ if (interactive) {
 	}
 	if (!runVisitDate) {
 		const suggested = images.length > 0 ? isoFromDatestamp(datestampFor(images[0])) : undefined;
-		const answer = await prompt.question(
+		const answer = await ask(
 			`Visit date${suggested ? ` [${suggested}]` : ''}: `,
 		);
 		// Blank keeps per-photo dates; only an explicit answer sets one run date.
 		if (answer.trim()) runVisitDate = answer.trim();
 	}
 	if (runTags.length === 0) {
-		const answer = await prompt.question('Tags, comma-separated (blank for none): ');
+		const answer = await ask('Tags, comma-separated (blank for none): ');
 		runTags.push(...splitList(answer));
 	}
 	if (manifestDefaults.keywords === undefined) {
-		const answer = await prompt.question('Import Photos keywords as tags? [Y/n] ');
+		const answer = await ask('Import Photos keywords as tags? [Y/n] ');
 		importKeywords = !/^n/i.test(answer.trim());
+	}
+
+	// Apple captions often read `Artist | Artist`. Offer to create records for
+	// caption names that do not match an existing artist, without assuming every
+	// caption segment is a person.
+	const unmatchedCaptionNames = [
+		...new Set(
+			[...scanned.values()]
+				.flatMap((info) => captionSegments(info.captionText))
+				.filter((name) => !matchArtist(name)),
+		),
+	];
+
+	if (unmatchedCaptionNames.length > 0) {
+		console.log('\nCaption names with no artist record:');
+		unmatchedCaptionNames.forEach((name, index) => console.log(`  ${index + 1}. ${name}`));
+		const answer = await ask(
+			'Create these artists? [Y] all, [n] none, or numbers e.g. 1,3: ',
+		);
+		const reply = answer.trim();
+		let chosen = unmatchedCaptionNames;
+		if (/^n/i.test(reply)) chosen = [];
+		else if (reply && !/^y/i.test(reply)) {
+			const indexes = reply
+				.split(/[,\s]+/)
+				.map((value) => Number.parseInt(value, 10))
+				.filter((value) => Number.isInteger(value) && value > 0);
+			chosen = indexes
+				.map((index) => unmatchedCaptionNames[index - 1])
+				.filter(Boolean);
+		}
+		for (const name of chosen) resolveArtist(name);
 	}
 
 	// Keep prompted answers so the next run has them, and so they can be edited
 	// by hand between an abort and a re-run.
 	if (options.save) {
-		const nextManifest = {
+		const nextManifest = compact({
 			...manifest,
-			visit: {
+			visit: compact({
 				...(manifest.visit ?? {}),
 				...(runGalleryName ? { gallery: runGalleryName } : {}),
 				...(runVisitDate ? { visitedAt: runVisitDate } : {}),
-			},
+			}),
 			defaults: {
 				...(manifest.defaults ?? {}),
 				...(runTags.length > 0 ? { tags: runTags } : {}),
 				keywords: importKeywords,
 			},
-		};
+		});
 		if (options.dryRun) {
 			console.log(`\nWould save answers to ${path.relative(ROOT, manifestPath)}:`);
 			for (const line of stringifyYaml(nextManifest).trimEnd().split('\n')) {
@@ -483,23 +552,12 @@ for (const name of images) {
 
 	// A caption segment that exactly matches a known artist name or alias is
 	// linked automatically. Everything else stays source text.
-	const captionSegments = (captionText ?? '')
-		.split('|')
-		.map((part) => part.trim())
-		.filter(Boolean);
-	const captionArtists = captionSegments
-		.map((part) =>
-			artists.find(
-				(artist) =>
-					artist.data.name?.toLowerCase() === part.toLowerCase() ||
-					(artist.data.aliases ?? []).some(
-						(alias) => alias.toLowerCase() === part.toLowerCase(),
-					),
-			),
-		)
-		.filter(Boolean);
-	if (captionArtists.length === 0 && captionSegments.length > 0) {
-		plan.warnings.push(`${name}: caption kept as source text: ${captionSegments.join(' | ')}`);
+	const segments = captionSegments(captionText);
+	const captionArtists = [];
+	for (const segment of segments) {
+		const artist = matchArtist(segment);
+		if (artist) captionArtists.push(artist);
+		else plan.warnings.push(`${name}: caption kept as source text: ${segment}`);
 	}
 
 	const manifestArtists = (metadata.artists ?? manifestDefaults.artists ?? []).map((artist) =>
@@ -706,7 +764,7 @@ if (!hasWork) {
 }
 
 if (!options.yes) {
-	const answer = await prompt.question('\nWrite these files? [y/N] ');
+	const answer = await ask('\nWrite these files? [y/N] ');
 	if (!/^y(es)?$/i.test(answer.trim())) {
 		console.log('Aborted.');
 		prompt.close();
