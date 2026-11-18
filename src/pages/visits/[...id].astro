@@ -55,7 +55,7 @@ const heading = visit.data.title ?? (date ? formatDate(date, 'long') : visit.id)
 				}
 			</p>
 			{
-				note.Content && (
+				visit.body?.trim() && note.Content && (
 					<div class="prose">
 						<note.Content />
 					</div>

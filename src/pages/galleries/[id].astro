@@ -29,7 +29,7 @@ const facts = [gallery.data.location, gallery.data.city, gallery.data.country].f
 			<h1>{gallery.data.name}</h1>
 			{facts.length > 0 && <p class="facts">{facts.join(' · ')}</p>}
 			{
-				note.Content && (
+				gallery.body?.trim() && note.Content && (
 					<div class="prose">
 						<note.Content />
 					</div>

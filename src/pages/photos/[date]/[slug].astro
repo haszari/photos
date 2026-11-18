@@ -25,6 +25,7 @@ const [relations, registry, allTags] = await Promise.all([
 ]);
 
 const note = photo.entry ? await render(photo.entry) : undefined;
+const hasNote = Boolean(photo.entry?.body?.trim());
 const data = photo.entry?.data;
 const tagSlugs = photoTags(data?.tags, registry);
 const tagMap = new Map(allTags.map((tag) => [tag.slug, tag]));
@@ -138,7 +139,7 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 					)
 				}
 				{
-					note && note.Content && (
+					hasNote && note?.Content && (
 						<div class="prose photo-meta__note">
 							<note.Content />
 						</div>

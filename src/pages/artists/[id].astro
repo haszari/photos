@@ -28,7 +28,7 @@ const facts = [
 			<h1>{artist.data.name}</h1>
 			{facts.length > 0 && <p class="facts">{facts.join(' · ')}</p>}
 			{
-				note.Content && (
+				artist.body?.trim() && note.Content && (
 					<div class="prose">
 						<note.Content />
 					</div>

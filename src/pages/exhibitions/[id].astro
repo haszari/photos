@@ -25,7 +25,7 @@ const dates = formatDateRange(exhibition.data.startDate, exhibition.data.endDate
 			<h1>{exhibition.data.title}</h1>
 			{dates && <p class="facts">{dates}</p>}
 			{
-				note.Content && (
+				exhibition.body?.trim() && note.Content && (
 					<div class="prose">
 						<note.Content />
 					</div>

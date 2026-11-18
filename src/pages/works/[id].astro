@@ -41,7 +41,7 @@ const artists = workArtists(index, work);
 				}
 			</p>
 			{
-				note.Content && (
+				work.body?.trim() && note.Content && (
 					<div class="prose">
 						<note.Content />
 					</div>
