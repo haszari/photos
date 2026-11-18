@@ -135,7 +135,7 @@ p {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
-	gap: 0.25rem 0.6rem;
+	gap: 0.25rem 0.9rem;
 	font-size: 1rem;
 	/* 400 so the date link renders with the same weight, and therefore the same
 	   apparent green, as links elsewhere. */
