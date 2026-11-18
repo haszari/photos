@@ -169,12 +169,15 @@ p {
 	display: flex;
 	align-items: flex-end;
 	justify-content: center;
-	gap: clamp(1rem, 3vw, 3rem);
+	/* Small, fixed gap: extra window width becomes margin outside the pair,
+	   not space between the photo and its card. */
+	gap: clamp(0.75rem, 1.2vw, 1.25rem);
 	width: 100%;
 }
 
 .photo-page__figure {
-	flex: 1 1 auto;
+	/* Shrink to the image: no growth, so the card stays snug at any width. */
+	flex: 0 1 auto;
 	min-width: 0;
 	margin: 0;
 	display: flex;
