@@ -234,7 +234,7 @@ p {
 
 /* One white card, no field labels: artist, work, place, tags, note. */
 .photo-meta__box {
-	padding: 0.6rem 0.67rem;
+	padding: 0.65rem;
 	background-color: #fff;
 	display: flex;
 	flex-direction: column;
