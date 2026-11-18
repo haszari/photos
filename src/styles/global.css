@@ -249,7 +249,13 @@ p {
 	color: var(--ink-muted);
 }
 
+/* A breath between artist/work, place and tags, as in the sketch. */
+.photo-meta__line--place {
+	margin-top: 0.4rem;
+}
+
 .photo-meta__line--tags {
+	margin-top: 0.4rem;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.15rem 0.6rem;

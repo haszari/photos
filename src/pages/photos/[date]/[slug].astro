@@ -76,7 +76,7 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 						<p class="photo-meta__line">
 							{relations.artists.map((artist, index) => (
 								<>
-									{index > 0 && ', '}
+									{index > 0 && ' '}
 									<a href={route(`artists/${artist.id}/`)}>{artist.data.name}</a>
 								</>
 							))}
@@ -88,9 +88,9 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 						<p class="photo-meta__line photo-meta__line--muted">
 							{relations.works.map((work, index) => (
 								<>
-									{index > 0 && ' · '}
+									{index > 0 && ' '}
 									<a href={route(`works/${work.id}/`)}>{work.data.title}</a>
-									{work.data.date ? `, ${work.data.date}` : ''}
+									{work.data.date ? ` ${work.data.date}` : ''}
 								</>
 							))}
 						</p>
@@ -98,7 +98,7 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 				}
 				{
 					(relations.gallery || placeDate) && (
-						<p class="photo-meta__line photo-meta__line--muted">
+						<p class="photo-meta__line photo-meta__line--muted photo-meta__line--place">
 							{relations.gallery ? (
 								<a href={route(`galleries/${relations.gallery.id}/`)}>
 									{relations.gallery.data.name}
@@ -106,7 +106,7 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 							) : (
 								<span>{relations.visit?.data.title ?? 'Visit'}</span>
 							)}
-							{placeDate && <>, {formatDate(placeDate)}</>}
+							{placeDate && <> {formatDate(placeDate)}</>}
 						</p>
 					)
 				}
