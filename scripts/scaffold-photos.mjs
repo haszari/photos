@@ -5,7 +5,8 @@
  *   npm run scaffold:photos -- ./incoming/20261118 --date 20261118
  *
  * Options:
- *   --date <yyyymmdd>     Directory/filename date for this run
+ *   --date <yyyymmdd>     Force the directory/filename date (default: each
+ *                         photo's EXIF capture date)
  *   --gallery <name>      Default gallery for the run
  *   --visit-date <date>   Default visit date (YYYY-MM-DD)
  *   --tags <a,b>          Default tags for the run
@@ -330,14 +331,45 @@ const manifestVisit = manifest.visit ?? {};
 const manifestDefaults = manifest.defaults ?? {};
 const manifestPhotos = manifest.photos ?? {};
 
-let runDatestamp = options.date;
+// --- Peek at the images ---------------------------------------------------
+
+// Read EXIF/XMP once per image. Capture dates come from the photos themselves;
+// `--date` is an override, not a requirement.
+const scanned = new Map();
+for (const name of images) {
+	const sourcePath = path.join(sourceDir, name);
+	const info = { takenAt: undefined, captionText: undefined, keywordTags: [] };
+	try {
+		const exif = await exifr.parse(sourcePath, {
+			xmp: true,
+			iptc: true,
+			exif: true,
+			tiff: true,
+		});
+		info.takenAt = exif?.DateTimeOriginal ?? exif?.CreateDate;
+		const caption = exif?.ImageDescription ?? exif?.Description ?? exif?.Caption;
+		if (typeof caption === 'string') {
+			info.captionText = caption.replace(/[|\s]+$/u, '').trim() || undefined;
+		}
+		const subject = exif?.Subject ?? exif?.subject ?? exif?.Keywords;
+		if (Array.isArray(subject)) info.keywordTags = subject.map(String);
+		else if (typeof subject === 'string') info.keywordTags = [subject];
+	} catch {
+		// No readable EXIF/XMP.
+	}
+	scanned.set(name, info);
+}
+
 let runVisitDate = options.visitDate ?? manifestVisit.visitedAt;
-if (!runDatestamp && runVisitDate) runDatestamp = runVisitDate.replaceAll('-', '');
-if (!runDatestamp) {
-	const firstDate = Object.values(manifestPhotos)
-		.map((entry) => entry?.takenAt)
-		.find(Boolean);
-	if (firstDate) runDatestamp = datestampFromDate(new Date(firstDate));
+
+/** `--date` override, per-photo `takenAt`, EXIF, then the visit date. */
+function dateFor(name) {
+	if (options.date) return options.date;
+	const metadata = manifestPhotos[name] ?? {};
+	const takenAt = metadata.takenAt ?? scanned.get(name)?.takenAt;
+	if (takenAt) return datestampFromDate(new Date(takenAt));
+	if (runVisitDate) return String(runVisitDate).replaceAll('-', '');
+	return undefined;
 }
 
 const galleryName = options.gallery ?? manifestVisit.gallery;
@@ -350,21 +382,32 @@ const runTags = [...options.tags, ...(manifestDefaults.tags ?? [])];
 const prompt = createInterface({ input: process.stdin, output: process.stdout });
 const interactive = !options.yes && Boolean(process.stdin.isTTY);
 
-if (!runDatestamp) {
+const undated = images.filter((name) => !dateFor(name));
+let fallbackDatestamp;
+
+if (undated.length > 0) {
 	if (!interactive) {
 		throw new Error(
-			'No date found. Pass --date yyyymmdd, or run without --yes to be prompted.',
+			`No capture date for: ${undated.join(', ')}. Pass --date yyyymmdd, or set takenAt in photos.yml.`,
 		);
 	}
-	const answer = await prompt.question('Directory date for this run (YYYYMMDD): ');
-	runDatestamp = answer.trim();
-}
-const datestamp = runDatestamp;
-if (!parseDatestamp(datestamp)) {
-	throw new Error(`Invalid date "${datestamp}". Expected YYYYMMDD.`);
+	const answer = await prompt.question(
+		`No capture date for ${undated.length} photo(s). Date to use (YYYYMMDD): `,
+	);
+	fallbackDatestamp = answer.trim();
+	if (!parseDatestamp(fallbackDatestamp)) {
+		throw new Error(`Invalid date "${fallbackDatestamp}". Expected YYYYMMDD.`);
+	}
 }
 
-const defaultVisitDate = isoFromDatestamp(datestamp);
+function datestampFor(name) {
+	const value = dateFor(name) ?? fallbackDatestamp;
+	if (!parseDatestamp(value)) {
+		throw new Error(`Invalid date "${value}" for ${name}. Expected YYYYMMDD.`);
+	}
+	return value;
+}
+
 let importKeywords = manifestDefaults.keywords !== false;
 
 if (interactive) {
@@ -376,8 +419,12 @@ if (interactive) {
 		}
 	}
 	if (!runVisitDate) {
-		const answer = await prompt.question(`Visit date [${defaultVisitDate}]: `);
-		runVisitDate = answer.trim() || defaultVisitDate;
+		const suggested = images.length > 0 ? isoFromDatestamp(datestampFor(images[0])) : undefined;
+		const answer = await prompt.question(
+			`Visit date${suggested ? ` [${suggested}]` : ''}: `,
+		);
+		// Blank keeps per-photo dates; only an explicit answer sets one run date.
+		if (answer.trim()) runVisitDate = answer.trim();
 	}
 	if (runTags.length === 0) {
 		const answer = await prompt.question('Tags, comma-separated (blank for none): ');
@@ -416,8 +463,7 @@ if (interactive) {
 	}
 }
 
-const year = datestamp.slice(0, 4);
-const destinationDir = path.join(CONTENT, 'photos', year, datestamp);
+const targetDatestamps = [...new Set(images.map((name) => datestampFor(name)))].sort();
 
 for (const name of images) {
 	const sourcePath = path.join(sourceDir, name);
@@ -426,33 +472,14 @@ for (const name of images) {
 	const stem = path.basename(name, path.extname(name));
 	const safeStem = stem.replace(/\s+/g, '-').replace(/[^\p{L}\p{N}._-]/gu, '');
 
-	let takenAt;
-	if (metadata.takenAt) takenAt = new Date(metadata.takenAt);
-	else {
-		try {
-			const exif = await exifr.parse(sourcePath, {
-				pick: ['DateTimeOriginal', 'CreateDate'],
-			});
-			takenAt = exif?.DateTimeOriginal ?? exif?.CreateDate;
-		} catch {
-			takenAt = undefined;
-		}
-	}
+	const datestamp = datestampFor(name);
+	const year = datestamp.slice(0, 4);
+	const destinationDir = path.join(CONTENT, 'photos', year, datestamp);
 
-	let caption;
-	let keywordTags = [];
-	try {
-		const exif = await exifr.parse(sourcePath, { xmp: true, iptc: true, exif: true, tiff: true });
-		caption = exif?.ImageDescription ?? exif?.Description ?? exif?.Caption ?? undefined;
-		const subject = exif?.Subject ?? exif?.subject ?? exif?.Keywords;
-		if (Array.isArray(subject)) keywordTags = subject.map(String);
-		else if (typeof subject === 'string') keywordTags = [subject];
-	} catch {
-		// No readable IPTC/XMP.
-	}
-
-	const captionText =
-		typeof caption === 'string' ? caption.replace(/[|\s]+$/u, '').trim() : undefined;
+	const scannedInfo = scanned.get(name) ?? {};
+	const takenAt = metadata.takenAt ?? scannedInfo.takenAt;
+	const captionText = scannedInfo.captionText;
+	const keywordTags = scannedInfo.keywordTags ?? [];
 
 	// A caption segment that exactly matches a known artist name or alias is
 	// linked automatically. Everything else stays source text.
@@ -610,7 +637,11 @@ function isoFromDatestamp(value) {
 // --- Report ---------------------------------------------------------------
 
 console.log(`\nSource:  ${path.relative(ROOT, sourceDir)}`);
-console.log(`Target:  ${path.relative(ROOT, destinationDir)}`);
+console.log(
+	`Target:  ${targetDatestamps
+		.map((value) => `src/content/photos/${value.slice(0, 4)}/${value}`)
+		.join(', ')}`,
+);
 console.log(`Images:  ${plan.images.length} to copy, ${plan.skipped.length} skipped`);
 console.log(
 	`Sidecars: ${plan.sidecars.length} new, ${plan.sidecarUpdates.length} updated (${plan.images.length - plan.sidecars.length} images need none)`,
@@ -686,8 +717,8 @@ prompt.close();
 
 // --- Write ----------------------------------------------------------------
 
-await mkdir(destinationDir, { recursive: true });
 for (const image of plan.images) {
+	await mkdir(path.dirname(image.destination), { recursive: true });
 	await copyFile(image.sourcePath, image.destination);
 }
 for (const sidecar of plan.sidecars) {

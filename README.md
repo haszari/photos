@@ -21,13 +21,19 @@ npm run scaffold:photos -- <source-dir> [--date yyyymmdd] [--yes] [--dry-run]
 ## Adding photos
 
 1. Export JPEGs from Apple Photos into a folder, e.g. `incoming/20261118/`.
+   The folder name is only a label — each photo's directory date comes from its
+   own EXIF capture time.
 2. Optionally add `incoming/20261118/photos.yml` describing the visit and any
    per-photo metadata.
 3. Run the scaffolder, review `git diff`, commit images and records together.
 
 ```sh
-npm run scaffold:photos -- ./incoming/20261118 --date 20261118
+npm run scaffold:photos -- ./incoming/20261118
 ```
+
+`--date yyyymmdd` is an override, not a requirement. Without it, dates come from
+EXIF, so one folder may write to several date directories. Photos with no EXIF
+date fall back to the visit date, then to a single prompt.
 
 The scaffolder copies images unchanged and writes a metadata sidecar only when
 there is metadata. Existing files are never overwritten: identical files are
