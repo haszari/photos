@@ -26,11 +26,11 @@ const groups = await groupPhotos(photos);
 						</time>
 						{group.gallery && (
 							<>
-								{' — '}
+								{' '}
 								<a href={route(`galleries/${group.gallery.id}/`)}>{group.gallery.data.name}</a>
 							</>
 						)}
-						{!group.gallery && group.visit?.data.title && ` — ${group.visit.data.title}`}
+						{!group.gallery && group.visit?.data.title && ` ${group.visit.data.title}`}
 					</Fragment>
 				</PhotoGroup>
 			))

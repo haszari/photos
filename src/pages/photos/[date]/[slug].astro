@@ -33,7 +33,7 @@ const tags = tagSlugs.map((slug) => tagMap.get(slug)).filter(Boolean);
 
 const workTitle = relations.works[0]?.data.title;
 const heading = workTitle ?? formatDate(photo.date, 'long');
-const pageTitle = workTitle ? `${workTitle} — ${formatDate(photo.date)}` : formatDate(photo.date, 'long');
+const pageTitle = workTitle ? `${workTitle} ${formatDate(photo.date)}` : formatDate(photo.date, 'long');
 const alt = data?.alt ?? data?.sourceCaption ?? '';
 const description = data?.sourceCaption ?? alt;
 const placeDate = relations.visit?.data.visitedAt ?? photo.date;

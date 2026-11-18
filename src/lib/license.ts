@@ -27,7 +27,7 @@ export const CODE_LICENSE = {
 };
 
 /** Human-readable attribution line, e.g. for an about page or a credit block. */
-export const ATTRIBUTION_LINE = `${CREATOR.name}, ${SITE_URL} — ${PHOTO_LICENSE.name}`;
+export const ATTRIBUTION_LINE = `${CREATOR.name} ${SITE_URL} ${PHOTO_LICENSE.name}`;
 
 export function photoLicenseJsonLd() {
 	return {

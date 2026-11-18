@@ -18,7 +18,7 @@ export function formatDate(date: Date | undefined, style: 'short' | 'long' = 'sh
 }
 
 export function formatDateRange(start?: Date, end?: Date): string {
-	if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
+	if (start && end) return `${formatDate(start)} ${formatDate(end)}`;
 	if (start) return `From ${formatDate(start)}`;
 	if (end) return `Until ${formatDate(end)}`;
 	return '';
