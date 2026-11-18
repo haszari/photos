@@ -53,6 +53,7 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 	</Fragment>
 	<main class="photo-page">
 		<h1 class="visually-hidden">{heading}</h1>
+		<div class="photo-page__inner">
 		<figure class="photo-page__figure">
 			<Picture
 				src={photo.image}
@@ -133,5 +134,6 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 				<a href={route('')}>All photos</a>
 			</p>
 		</aside>
+		</div>
 	</main>
 </Base>

@@ -196,13 +196,23 @@ p {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: clamp(1rem, 3vw, 3rem);
 	padding-block: var(--page-pad);
+}
+
+/* The inner row is only as tall as the image, so the metadata box can sit
+   flush with the image's bottom edge while the pair stays centred. */
+.photo-page__inner {
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	gap: clamp(1rem, 3vw, 3rem);
+	width: 100%;
 }
 
 .photo-page__figure {
 	flex: 1 1 auto;
 	min-width: 0;
+	margin: 0;
 	display: flex;
 	justify-content: center;
 }
@@ -218,7 +228,6 @@ p {
 
 .photo-meta {
 	flex: 0 0 clamp(180px, 18vw, 300px);
-	align-self: flex-end;
 	font-size: 0.8rem;
 	line-height: 1.5;
 }
@@ -254,10 +263,9 @@ p {
 }
 
 @media (max-width: 720px) {
-	.photo-page {
+	.photo-page__inner {
 		flex-direction: column;
 		align-items: stretch;
-		justify-content: flex-start;
 	}
 
 	.photo-page__figure img {
@@ -266,7 +274,6 @@ p {
 
 	.photo-meta {
 		flex-basis: auto;
-		align-self: stretch;
 	}
 }
 
