@@ -7,6 +7,7 @@ import { groupPhotos } from '../../lib/groups';
 import { photosForGallery } from '../../lib/queries';
 import { formatDate } from '../../lib/format';
 import { route } from '../../lib/url';
+import { gridStyle } from '../../lib/layout';
 
 export async function getStaticPaths() {
 	const { galleries } = await getIndex();
@@ -40,7 +41,7 @@ const facts = [gallery.data.location, gallery.data.city, gallery.data.country].f
 		<div class="gallery">
 			{
 				groups.map((group) => (
-					<section>
+					<section style={gridStyle(group.photos.length)}>
 						<PhotoGrid photos={group.photos} />
 						<p class="group-caption">
 							<time datetime={group.date.toISOString().slice(0, 10)}>{formatDate(group.date)}</time>

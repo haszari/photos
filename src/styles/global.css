@@ -127,10 +127,13 @@ p {
 	font-size: 0.95rem;
 }
 
-/* Masonry: CSS columns keep the site JS-free. */
+/* Masonry: CSS columns keep the site JS-free. The block is centred and its
+   width follows the column count so photos never stretch edge to edge. */
 .masonry {
-	columns: 3;
+	columns: var(--masonry-columns, 3);
 	column-gap: var(--gap);
+	max-width: min(100%, calc(var(--masonry-columns, 3) * 26rem));
+	margin-inline: auto;
 }
 
 .masonry__item {
@@ -146,7 +149,7 @@ p {
 
 @media (max-width: 900px) {
 	.masonry {
-		columns: 2;
+		columns: var(--masonry-columns-sm, 2);
 	}
 }
 
@@ -158,6 +161,8 @@ p {
 
 /* Date / visit caption below a photo group. */
 .group-caption {
+	max-width: min(100%, calc(var(--masonry-columns, 3) * 26rem));
+	margin-inline: auto;
 	margin-top: calc(var(--gap) / 2);
 	font-size: 0.8rem;
 	letter-spacing: 0.01em;

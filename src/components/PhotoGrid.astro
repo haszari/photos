@@ -3,6 +3,7 @@ import { Picture } from 'astro:assets';
 import type { Photo } from '../lib/photos';
 import { photoHref } from '../lib/photos';
 import { route } from '../lib/url';
+import { gridColumns, gridStyle } from '../lib/layout';
 
 interface Props {
 	photos: Photo[];
@@ -11,18 +12,23 @@ interface Props {
 	sizes?: string;
 }
 
-const {
-	photos,
-	eagerCount = 2,
-	sizes = '(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw',
-} = Astro.props;
+const { photos, eagerCount = 2, sizes } = Astro.props;
+
+const columns = gridColumns(photos.length);
+const resolvedSizes =
+	sizes ??
+	(columns === 1
+		? '100vw'
+		: columns === 2
+			? '(max-width: 560px) 100vw, 50vw'
+			: '(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw');
 
 function altFor(photo: Photo): string {
 	return photo.entry?.data.alt ?? photo.entry?.data.sourceCaption ?? '';
 }
 ---
 
-<div class="masonry">
+<div class="masonry" style={gridStyle(photos.length)}>
 	{
 		photos.map((photo, index) => (
 			<div class="masonry__item">
@@ -31,7 +37,7 @@ function altFor(photo: Photo): string {
 						src={photo.image}
 						alt={altFor(photo)}
 						widths={[480, 960, 1440]}
-						sizes={sizes}
+						sizes={resolvedSizes}
 						formats={['avif', 'webp']}
 						fallbackFormat="jpeg"
 						quality={82}

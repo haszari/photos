@@ -5,6 +5,7 @@ import { getPhotos } from '../lib/photos';
 import { groupPhotos } from '../lib/groups';
 import { formatDate } from '../lib/format';
 import { route } from '../lib/url';
+import { gridStyle } from '../lib/layout';
 
 const photos = await getPhotos();
 const groups = await groupPhotos(photos);
@@ -15,7 +16,7 @@ const groups = await groupPhotos(photos);
 		<h1 class="visually-hidden">All photos</h1>
 		{
 			groups.map((group) => (
-				<section>
+				<section style={gridStyle(group.photos.length)}>
 					<PhotoGrid photos={group.photos} />
 					<p class="group-caption">
 						<time datetime={group.date.toISOString().slice(0, 10)}>{formatDate(group.date)}</time>
