@@ -8,6 +8,8 @@
 	--rule: color-mix(in srgb, var(--ink) 18%, transparent);
 	--gap: clamp(0.75rem, 1.5vw, 1.5rem);
 	--page-pad: clamp(1rem, 2.5vw, 2.5rem);
+	/* Grid and its caption share one width: most of the window, centred. */
+	--grid-width: min(100%, 92vw);
 	--font-sans: ui-sans-serif, system-ui, sans-serif;
 
 	color-scheme: light;
@@ -127,11 +129,17 @@ p {
 	font-size: 0.95rem;
 }
 
-/* Masonry: CSS columns keep the site JS-free. The grid fills the page inset;
-   the caption shares that inset so heading and photos line up. */
+/* Masonry: CSS columns keep the site JS-free. A flex frame centres the grid
+   while it still takes most of the window; the caption shares its width. */
+.grid-frame {
+	display: flex;
+	justify-content: center;
+}
+
 .masonry {
 	columns: var(--masonry-columns, 3);
 	column-gap: var(--gap);
+	width: var(--grid-width);
 }
 
 .masonry__item {
@@ -159,6 +167,8 @@ p {
 
 /* Date / visit caption below a photo group. */
 .group-caption {
+	width: var(--grid-width);
+	margin-inline: auto;
 	margin-top: calc(var(--gap) / 2);
 	font-size: 0.8rem;
 	letter-spacing: 0.01em;
