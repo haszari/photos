@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import { getTags } from '../../lib/tags';
 import { route } from '../../lib/url';
 
@@ -8,7 +9,7 @@ const tags = await getTags();
 
 <Base path="tags/" title="Tags">
 	<main class="page stack">
-		<h1>Tags</h1>
+		<PageHeader title="Tags" />
 		<ul class="tag-cloud">
 			{
 				tags.map((tag) => (

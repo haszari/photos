@@ -1,6 +1,7 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import { getIndex } from '../../lib/content';
 import { photosForArtist } from '../../lib/queries';
@@ -12,10 +13,12 @@ export async function getStaticPaths() {
 
 const { artist } = Astro.props;
 const [photos, note] = await Promise.all([photosForArtist(artist.id), render(artist)]);
+
 const facts = [
 	artist.data.country,
 	...(artist.data.aliases?.length ? [`also ${artist.data.aliases.join(', ')}`] : []),
 ].filter(Boolean);
+const hasBody = Boolean(artist.body?.trim());
 ---
 
 <Base
@@ -24,17 +27,18 @@ const facts = [
 	description={`Photos of work by ${artist.data.name}.`}
 >
 	<main class="page stack">
-		<header class="stack">
-			<h1>{artist.data.name}</h1>
-			{facts.length > 0 && <p class="facts">{facts.join(' · ')}</p>}
+		<PageHeader title={artist.data.name} body={hasBody}>
 			{
-				artist.body?.trim() && note.Content && (
-					<div class="prose">
-						<note.Content />
-					</div>
+				facts.length > 0 && (
+					<Fragment slot="facts">
+						{facts.map((fact) => (
+							<span>{fact}</span>
+						))}
+					</Fragment>
 				)
 			}
-		</header>
+			<note.Content />
+		</PageHeader>
 		<PhotoGrid photos={photos} />
 		{photos.length === 0 && <p>No photos yet.</p>}
 	</main>

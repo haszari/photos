@@ -1,6 +1,7 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import PhotoGroup from '../../components/PhotoGroup.astro';
 import { getIndex } from '../../lib/content';
 import { groupPhotos } from '../../lib/groups';
@@ -17,6 +18,7 @@ const { gallery } = Astro.props;
 const [photos, note] = await Promise.all([photosForGallery(gallery.id), render(gallery)]);
 const groups = await groupPhotos(photos);
 const facts = [gallery.data.location, gallery.data.city, gallery.data.country].filter(Boolean);
+const hasBody = Boolean(gallery.body?.trim());
 ---
 
 <Base
@@ -25,36 +27,35 @@ const facts = [gallery.data.location, gallery.data.city, gallery.data.country].f
 	description={`Photos taken at ${gallery.data.name}.`}
 >
 	<main class="page stack">
-		<header class="stack">
-			<h1>{gallery.data.name}</h1>
-			{facts.length > 0 && <p class="facts">{facts.join(' · ')}</p>}
+		<PageHeader title={gallery.data.name} body={hasBody}>
 			{
-				gallery.body?.trim() && note.Content && (
-					<div class="prose">
-						<note.Content />
-					</div>
+				facts.length > 0 && (
+					<Fragment slot="facts">
+						{facts.map((fact) => (
+							<span>{fact}</span>
+						))}
+					</Fragment>
 				)
 			}
-		</header>
+			<note.Content />
+		</PageHeader>
 
-		<div class="stack">
-			{
-				groups.map((group) => (
-					<PhotoGroup photos={group.photos}>
-						<Fragment slot="heading">
-							<time datetime={group.date.toISOString().slice(0, 10)}>{formatDate(group.date)}</time>
-							{group.visit?.data.title && ` — ${group.visit.data.title}`}
-							{group.visit && (
-								<>
-									{' — '}
-									<a href={route(`visits/${group.visit.id}/`)}>visit</a>
-								</>
+		{
+			groups.map((group) => (
+				<PhotoGroup photos={group.photos}>
+					<Fragment slot="heading">
+						<time datetime={group.date.toISOString().slice(0, 10)}>
+							{group.visit ? (
+								<a href={route(`visits/${group.visit.id}/`)}>{formatDate(group.date)}</a>
+							) : (
+								formatDate(group.date)
 							)}
-						</Fragment>
-					</PhotoGroup>
-				))
-			}
-		</div>
+						</time>
+						{group.visit?.data.title && ` — ${group.visit.data.title}`}
+					</Fragment>
+				</PhotoGroup>
+			))
+		}
 		{photos.length === 0 && <p>No photos yet.</p>}
 	</main>
 </Base>

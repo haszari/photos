@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import EntityList from '../../components/EntityList.astro';
 import { getIndex } from '../../lib/content';
 import { photosForArtist, featuredPhoto } from '../../lib/queries';
@@ -21,7 +22,7 @@ const items = await Promise.all(
 
 <Base path="artists/" title="Artists">
 	<main class="page stack">
-		<h1>Artists</h1>
+		<PageHeader title="Artists" />
 		<EntityList items={items} />
 		{items.length === 0 && <p>No artists yet.</p>}
 	</main>

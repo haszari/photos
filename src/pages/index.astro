@@ -17,7 +17,13 @@ const groups = await groupPhotos(photos);
 			groups.map((group) => (
 				<PhotoGroup photos={group.photos}>
 					<Fragment slot="heading">
-						<time datetime={group.date.toISOString().slice(0, 10)}>{formatDate(group.date)}</time>
+						<time datetime={group.date.toISOString().slice(0, 10)}>
+							{group.visit ? (
+								<a href={route(`visits/${group.visit.id}/`)}>{formatDate(group.date)}</a>
+							) : (
+								formatDate(group.date)
+							)}
+						</time>
 						{group.gallery && (
 							<>
 								{' — '}

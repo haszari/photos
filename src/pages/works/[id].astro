@@ -1,6 +1,7 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import { getIndex } from '../../lib/content';
 import { route } from '../../lib/url';
@@ -18,7 +19,9 @@ const [photos, note, index] = await Promise.all([
 	render(work),
 	getIndex(),
 ]);
+
 const artists = workArtists(index, work);
+const hasBody = Boolean(work.body?.trim());
 ---
 
 <Base
@@ -27,27 +30,21 @@ const artists = workArtists(index, work);
 	description={`Photos of ${work.data.title}.`}
 >
 	<main class="page stack">
-		<header class="stack">
-			<h1>{work.data.title}</h1>
-			<p class="facts">
-				{work.data.date && <span>{work.data.date}</span>}
-				{
-					artists.map((artist, position) => (
-						<>
-							{position > 0 && <span>·</span>}
-							<a href={route(`artists/${artist.id}/`)}>{artist.data.name}</a>
-						</>
-					))
-				}
-			</p>
+		<PageHeader title={work.data.title} body={hasBody}>
 			{
-				work.body?.trim() && note.Content && (
-					<div class="prose">
-						<note.Content />
-					</div>
+				(work.data.date || artists.length > 0) && (
+					<Fragment slot="facts">
+						{work.data.date && <span>{work.data.date}</span>}
+						{artists.map((artist) => (
+							<span>
+								<a href={route(`artists/${artist.id}/`)}>{artist.data.name}</a>
+							</span>
+						))}
+					</Fragment>
 				)
 			}
-		</header>
+			<note.Content />
+		</PageHeader>
 		<PhotoGrid photos={photos} />
 		{photos.length === 0 && <p>No photos yet.</p>}
 	</main>

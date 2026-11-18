@@ -298,7 +298,19 @@ p {
 	gap: 1.5rem;
 }
 
+/* Same header rhythm on every entity page. */
+.page-header {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.page-header h1 {
+	font-size: clamp(1.5rem, 2.5vw, 2rem);
+}
+
 .facts {
+	margin: 0;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.35rem 1rem;

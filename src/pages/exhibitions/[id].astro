@@ -1,6 +1,7 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import { getIndex } from '../../lib/content';
 import { photosForExhibition } from '../../lib/queries';
@@ -17,21 +18,21 @@ export async function getStaticPaths() {
 const { exhibition } = Astro.props;
 const [photos, note] = await Promise.all([photosForExhibition(exhibition.id), render(exhibition)]);
 const dates = formatDateRange(exhibition.data.startDate, exhibition.data.endDate);
+const hasBody = Boolean(exhibition.body?.trim());
 ---
 
 <Base path={`exhibitions/${exhibition.id}/`} title={exhibition.data.title}>
 	<main class="page stack">
-		<header class="stack">
-			<h1>{exhibition.data.title}</h1>
-			{dates && <p class="facts">{dates}</p>}
+		<PageHeader title={exhibition.data.title} body={hasBody}>
 			{
-				exhibition.body?.trim() && note.Content && (
-					<div class="prose">
-						<note.Content />
-					</div>
+				dates && (
+					<Fragment slot="facts">
+						<span>{dates}</span>
+					</Fragment>
 				)
 			}
-		</header>
+			<note.Content />
+		</PageHeader>
 		<PhotoGrid photos={photos} />
 		{photos.length === 0 && <p>No photos yet.</p>}
 	</main>

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import { getTag, getTags } from '../../lib/tags';
 import { photosForTag } from '../../lib/queries';
@@ -16,10 +17,15 @@ const label = tag?.label ?? slug;
 
 <Base path={`tags/${slug}/`} title={label} description={tag?.description}>
 	<main class="page stack">
-		<header class="stack">
-			<h1>{label}</h1>
-			{tag?.description && <p class="facts">{tag.description}</p>}
-		</header>
+		<PageHeader title={label} body={false}>
+			{
+				tag?.description && (
+					<Fragment slot="facts">
+						<span>{tag.description}</span>
+					</Fragment>
+				)
+			}
+		</PageHeader>
 		<PhotoGrid photos={photos} />
 		{photos.length === 0 && <p>No photos yet.</p>}
 	</main>
