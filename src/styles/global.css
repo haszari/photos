@@ -260,6 +260,19 @@ p {
 	font-size: 0.8rem;
 }
 
+/* Hierarchy by size: artist > work > exhibition > gallery > everything else. */
+.photo-meta__exhibition {
+	font-size: 0.9rem;
+}
+
+.photo-meta__gallery {
+	font-size: 0.85rem;
+}
+
+.photo-meta__date {
+	font-size: 0.8rem;
+}
+
 .photo-meta__line--muted {
 	color: var(--ink-muted);
 }

@@ -99,16 +99,29 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 					)
 				}
 				{
-					(relations.gallery || placeDate) && (
+					(relations.exhibitions.length > 0 || relations.gallery || placeDate) && (
 						<p class="photo-meta__line photo-meta__line--muted photo-meta__line--place">
-							{relations.gallery ? (
-								<a href={route(`galleries/${relations.gallery.id}/`)}>
-									{relations.gallery.data.name}
-								</a>
-							) : (
-								<span>{relations.visit?.data.title ?? 'Visit'}</span>
+							{relations.exhibitions.map((exhibition, index) => (
+								<>
+									{index > 0 && ' '}
+									<span class="photo-meta__exhibition">
+										<a href={route(`exhibitions/${exhibition.id}/`)}>
+											{exhibition.data.title}
+										</a>
+									</span>
+								</>
+							))}
+							{relations.exhibitions.length > 0 && (relations.gallery || placeDate) && ' '}
+							{relations.gallery && (
+								<span class="photo-meta__gallery">
+									<a href={route(`galleries/${relations.gallery.id}/`)}>
+										{relations.gallery.data.name}
+									</a>
+								</span>
 							)}
-							{placeDate && <> {formatDate(placeDate)}</>}
+							{placeDate && (
+								<span class="photo-meta__date">{` ${formatDate(placeDate)}`}</span>
+							)}
 						</p>
 					)
 				}

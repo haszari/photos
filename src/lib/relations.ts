@@ -13,6 +13,8 @@ export interface PhotoRelations {
 	visit?: Visit;
 	gallery?: Gallery;
 	exhibition?: Exhibition;
+	/** Photo's own exhibition plus any listed on its visit. */
+	exhibitions: Exhibition[];
 	artists: Artist[];
 	works: Work[];
 }
@@ -36,6 +38,13 @@ export async function getRelations(photo: Photo): Promise<PhotoRelations> {
 		? index.exhibitionById.get(data.exhibition.id)
 		: undefined;
 
+	const exhibitions = [
+		exhibition,
+		...(visit?.data.exhibitions ?? []).map((reference) =>
+			index.exhibitionById.get(reference.id),
+		),
+	].filter((entry, position, list): entry is Exhibition => Boolean(entry) && list.indexOf(entry) === position);
+
 	const artists = (data?.artists ?? [])
 		.map((reference) => index.artistById.get(reference.id))
 		.filter((artist): artist is Artist => Boolean(artist));
@@ -44,7 +53,7 @@ export async function getRelations(photo: Photo): Promise<PhotoRelations> {
 		.map((reference) => index.workById.get(reference.id))
 		.filter((work): work is Work => Boolean(work));
 
-	return { visit, gallery, exhibition, artists, works };
+	return { visit, gallery, exhibition, exhibitions, artists, works };
 }
 
 /** Artists credited on a work, resolved through the index. */
