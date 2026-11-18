@@ -44,7 +44,12 @@ const siteJsonLd = {
 		<meta name="generator" content={Astro.generator} />
 	</head>
 	<body>
-		<div class="room" aria-hidden="true"></div>
+		<div class="room" aria-hidden="true">
+			<div class="room__wall room__wall--left"></div>
+			<div class="room__wall room__wall--right"></div>
+			<div class="room__floor wedge"></div>
+			<div class="room__floor band"></div>
+		</div>
 		<slot />
 	</body>
 </html>

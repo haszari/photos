@@ -2,6 +2,7 @@
 	--wall-left: #faf8f4;
 	--wall-right: #c4c1ba;
 	--floor: #8e8580;
+	--floor-band: 18vh;
 	--ink: #132018;
 	--ink-muted: #6d635c;
 	--rule: color-mix(in srgb, var(--ink) 18%, transparent);
@@ -33,7 +34,9 @@ body {
 	text-rendering: optimizeLegibility;
 }
 
-/* Room corner: three planes behind all content. */
+/* Room corner: three planes behind all content.
+   Left wall, right wall, then the floor as a wedge (triangle) sitting on a
+   full-width band. Orthographic, no perspective. */
 .room {
 	position: fixed;
 	inset: 0;
@@ -42,22 +45,41 @@ body {
 	background-color: var(--wall-left);
 }
 
-.room::before {
-	content: '';
+.room__wall {
 	position: absolute;
 	top: 0;
-	right: 0;
+	bottom: 0;
 	width: 50%;
-	height: 62%;
+}
+
+.room__wall--left {
+	left: 0;
+	background-color: var(--wall-left);
+}
+
+.room__wall--right {
+	left: 50%;
 	background-color: var(--wall-right);
 }
 
-.room::after {
-	content: '';
+/* Floor wedge: apex at the wall seam, base along the top of the band. */
+.room__floor.wedge {
 	position: absolute;
-	inset: 62% 0 0 0;
+	left: 0;
+	right: 0;
+	top: 52%;
+	bottom: var(--floor-band);
 	background-color: var(--floor);
-	clip-path: polygon(0 14%, 100% 0, 100% 100%, 0 100%);
+	clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.room__floor.band {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: var(--floor-band);
+	background-color: var(--floor);
 }
 
 .page {
