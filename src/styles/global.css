@@ -242,12 +242,12 @@ p {
 	white-space: nowrap;
 }
 
-/* Hierarchy by size: artist > work > exhibition > gallery > everything else. */
+/* Hierarchy by size: artist > work > exhibition > location > everything else. */
 .photo-meta__exhibition {
 	font-size: 1rem;
 }
 
-.photo-meta__gallery {
+.photo-meta__location {
 	font-size: 0.9rem;
 }
 

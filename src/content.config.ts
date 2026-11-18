@@ -16,11 +16,12 @@ const artists = defineCollection({
 	}),
 });
 
-const galleries = defineCollection({
-	loader: glob({ base: './src/content/galleries', pattern: '**/*.md' }),
+const locations = defineCollection({
+	loader: glob({ base: './src/content/locations', pattern: '**/*.md' }),
 	schema: z.object({
 		name: z.string(),
-		location: z.string().optional(),
+		/** Street address or area, e.g. `Civic Square` or `Cuba Street`. */
+		address: z.string().optional(),
 		city: z.string().optional(),
 		country: country.optional(),
 		featuredPhoto: z.string().optional(),
@@ -54,7 +55,7 @@ const works = defineCollection({
 const visits = defineCollection({
 	loader: glob({ base: './src/content/visits', pattern: '**/*.md' }),
 	schema: z.object({
-		gallery: reference('galleries').optional(),
+		location: reference('locations').optional(),
 		visitedAt: z.coerce.date().optional(),
 		title: z.string().optional(),
 		exhibitions: z.array(reference('exhibitions')).optional(),
@@ -87,7 +88,7 @@ const photos = defineCollection({
 	schema: z.object({
 		takenAt: z.coerce.date().optional(),
 		visit: reference('visits').optional(),
-		gallery: reference('galleries').optional(),
+		location: reference('locations').optional(),
 		exhibition: reference('exhibitions').optional(),
 		artists: z.array(reference('artists')).optional(),
 		works: z.array(reference('works')).optional(),
@@ -100,7 +101,7 @@ const photos = defineCollection({
 
 export const collections = {
 	artists,
-	galleries,
+	locations,
 	exhibitions,
 	works,
 	visits,

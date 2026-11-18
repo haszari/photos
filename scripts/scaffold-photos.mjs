@@ -7,7 +7,7 @@
  * Options:
  *   --date <yyyymmdd>     Force the directory/filename date (default: each
  *                         photo's EXIF capture date)
- *   --gallery <name>      Default gallery for the run
+ *   --location <name>     Default location for the run (--gallery is an alias)
  *   --visit-date <date>   Default visit date (YYYY-MM-DD)
  *   --tags <a,b>          Default tags for the run
  *   --manifest <file>     Metadata file (defaults to <source>/photos.yml)
@@ -17,7 +17,7 @@
  *   --yes                 Accept the plan without confirming
  *   --dry-run             Print the plan and exit
  *
- * Images are copied unchanged. Prompts ask for the directory date, gallery,
+ * Images are copied unchanged. Prompts ask for the directory date, location,
  * visit date and tags unless flags or `photos.yml` already answer them (skip
  * prompts with --yes). Prompted answers are saved back into `photos.yml`, so a
  * run can be aborted, the manifest edited by hand, then re-run: imported
@@ -60,7 +60,7 @@ const argv = process.argv.slice(2);
 const options = {
 	source: undefined,
 	date: undefined,
-	gallery: undefined,
+	location: undefined,
 	visitDate: undefined,
 	tags: [],
 	manifest: undefined,
@@ -74,7 +74,7 @@ for (let index = 0; index < argv.length; index += 1) {
 	const arg = argv[index];
 	const next = () => argv[(index += 1)];
 	if (arg === '--date') options.date = next();
-	else if (arg === '--gallery') options.gallery = next();
+	else if (arg === '--location' || arg === '--gallery') options.location = next();
 	else if (arg === '--visit-date') options.visitDate = next();
 	else if (arg === '--tags') options.tags = splitList(next());
 	else if (arg === '--manifest') options.manifest = next();
@@ -202,8 +202,8 @@ async function hashFile(file) {
 	return createHash('sha256').update(await readFile(file)).digest('hex');
 }
 
-const [galleries, artists, works, exhibitions, visits] = await Promise.all([
-	walkMarkdown(path.join(CONTENT, 'galleries')),
+const [locations, artists, works, exhibitions, visits] = await Promise.all([
+	walkMarkdown(path.join(CONTENT, 'locations')),
 	walkMarkdown(path.join(CONTENT, 'artists')),
 	walkMarkdown(path.join(CONTENT, 'works')),
 	walkMarkdown(path.join(CONTENT, 'exhibitions')),
@@ -223,16 +223,16 @@ try {
 	// Optional file.
 }
 
-function resolveGallery(name) {
+function resolveLocation(name) {
 	if (!name) return undefined;
 	const slug = slugify(name);
-	const existing = galleries.find(
-		(gallery) => gallery.id === slug || gallery.data.name?.toLowerCase() === name.toLowerCase(),
+	const existing = locations.find(
+		(entry) => entry.id === slug || entry.data.name?.toLowerCase() === name.toLowerCase(),
 	);
 	if (existing) return { id: existing.id, created: false };
 	const id = slug;
-	galleries.push({ id, data: { name } });
-	plan.entities.push(`galleries/${id}.md`);
+	locations.push({ id, data: { name } });
+	plan.entities.push(`locations/${id}.md`);
 	return { id, created: true };
 }
 
@@ -321,23 +321,23 @@ function resolveExhibition(title) {
 	return { id: slug, created: true };
 }
 
-function resolveVisit({ datestamp, galleryId, visitedAt, title, exhibitionTitles }) {
+function resolveVisit({ datestamp, locationId, visitedAt, title, exhibitionTitles }) {
 	const visitDate = visitedAt ?? datestamp;
 	const existing = visits.find((visit) => {
-		const sameGallery = (visit.data.gallery ?? '') === (galleryId ?? '');
+		const sameLocation = (visit.data.location ?? '') === (locationId ?? '');
 		const sameDate = visit.data.visitedAt
 			? isoDate(new Date(visit.data.visitedAt)) === visitDate
 			: visit.id.startsWith(visitedAt ? visitedAt.replaceAll('-', '') : '');
-		return sameGallery && sameDate;
+		return sameLocation && sameDate;
 	});
 	if (existing) return { id: existing.id, created: false };
 
 	const year = visitDate.slice(0, 4);
 	const prefix = visitDate.replaceAll('-', '');
-	const galleryPart = galleryId ?? slugify(title ?? 'visit');
-	const id = `${year}/${prefix}-${galleryPart}`;
+	const locationPart = locationId ?? slugify(title ?? 'visit');
+	const id = `${year}/${prefix}-${locationPart}`;
 	const data = {};
-	if (galleryId) data.gallery = galleryId;
+	if (locationId) data.location = locationId;
 	data.visitedAt = visitDate;
 	if (title) data.title = title;
 
@@ -440,9 +440,9 @@ function dateFor(name) {
 	return undefined;
 }
 
-const galleryName = options.gallery ?? manifestVisit.gallery;
-let runGalleryName = galleryName;
-let runGallery = resolveGallery(galleryName);
+const locationName = options.location ?? manifestVisit.location ?? manifestVisit.gallery;
+let runLocationName = locationName;
+let runLocation = resolveLocation(locationName);
 const runTags = [...options.tags, ...(manifestDefaults.tags ?? [])];
 
 // --- Prompts --------------------------------------------------------------
@@ -490,11 +490,11 @@ function datestampFor(name) {
 let importKeywords = manifestDefaults.keywords !== false;
 
 if (interactive) {
-	if (!runGallery) {
-		const answer = await ask('Gallery (blank for none): ');
+	if (!runLocation) {
+		const answer = await ask('Location (blank for none): ');
 		if (answer.trim()) {
-			runGalleryName = answer.trim();
-			runGallery = resolveGallery(runGalleryName);
+			runLocationName = answer.trim();
+			runLocation = resolveLocation(runLocationName);
 		}
 	}
 	if (!runVisitDate) {
@@ -553,7 +553,7 @@ if (interactive) {
 			...manifest,
 			visit: compact({
 				...(manifest.visit ?? {}),
-				...(runGalleryName ? { gallery: runGalleryName } : {}),
+				...(runLocationName ? { location: runLocationName } : {}),
 				...(runVisitDate ? { visitedAt: runVisitDate } : {}),
 			}),
 			defaults: {
@@ -673,18 +673,18 @@ for (const name of images) {
 		resolveWork(work, metadata.artists ?? manifestDefaults.artists ?? []),
 	);
 	const visitWanted = Boolean(
-		metadata.gallery ||
+		metadata.location ||
 			metadata.visitDate ||
 			metadata.visitTitle ||
 			metadata.exhibitions ||
-			runGallery ||
+			runLocation ||
 			runVisitDate ||
 			manifestVisit.title,
 	);
 	const visit = visitWanted
 		? resolveVisit({
 				datestamp,
-				galleryId: metadata.gallery ? resolveGallery(metadata.gallery)?.id : runGallery?.id,
+				locationId: metadata.location ? resolveLocation(metadata.location)?.id : runLocation?.id,
 				visitedAt: metadata.visitDate ?? runVisitDate ?? isoFromDatestamp(datestamp),
 				title: metadata.visitTitle ?? manifestVisit.title,
 				exhibitionTitles: metadata.exhibitions ?? manifestVisit.exhibitions,
@@ -715,7 +715,7 @@ for (const name of images) {
 	sidecarData.sourceFilename = name;
 	if (captionText) sidecarData.sourceCaption = captionText;
 
-	// Per the precedence rule, gallery only appears on a photo with no visit.
+	// Per the precedence rule, location only appears on a photo with no visit.
 	if (visit) sidecarData.visit = visit.id;
 
 	// A sidecar exists only for information worth keeping. A capture time or a
@@ -727,7 +727,7 @@ for (const name of images) {
 		'alt',
 		'sourceCaption',
 		'visit',
-		'gallery',
+		'location',
 		'exhibition',
 	];
 	const hasMetadata =
@@ -896,7 +896,7 @@ for (const entity of plan.entities) {
 	const id = rest.join('/').replace(/\.md$/, '');
 	const record =
 		{
-			galleries: galleries.find((entry) => entry.id === id),
+			locations: locations.find((entry) => entry.id === id),
 			artists: artists.find((entry) => entry.id === id),
 			works: works.find((entry) => entry.id === id),
 			exhibitions: exhibitions.find((entry) => entry.id === id),

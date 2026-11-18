@@ -26,12 +26,12 @@ const groups = await groupPhotos(photos);
 								)}
 							</time>
 						</span>
-						{group.gallery && (
+						{group.location && (
 							<span>
-								<a href={route(`galleries/${group.gallery.id}/`)}>{group.gallery.data.name}</a>
+								<a href={route(`locations/${group.location.id}/`)}>{group.location.data.name}</a>
 							</span>
 						)}
-						{!group.gallery && group.visit?.data.title && (
+						{!group.location && group.visit?.data.title && (
 							<span>{group.visit.data.title}</span>
 						)}
 					</Fragment>

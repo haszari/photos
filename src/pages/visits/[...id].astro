@@ -3,7 +3,7 @@ import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import PageHeader from '../../components/PageHeader.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
-import { getIndex, visitGallery } from '../../lib/content';
+import { getIndex, visitLocation } from '../../lib/content';
 import { photosForVisit } from '../../lib/queries';
 import { formatDate } from '../../lib/format';
 import { route } from '../../lib/url';
@@ -20,26 +20,26 @@ const [photos, note, index] = await Promise.all([
 	getIndex(),
 ]);
 
-const gallery = visitGallery(index, visit);
+const location = visitLocation(index, visit);
 const exhibitions = (visit.data.exhibitions ?? [])
 	.map((reference) => index.exhibitionById.get(reference.id))
 	.filter((exhibition): exhibition is NonNullable<typeof exhibition> => Boolean(exhibition));
 
 const date = visit.data.visitedAt;
 const title =
-	visit.data.title ?? gallery?.data.name ?? (date ? formatDate(date, 'long') : visit.id);
+	visit.data.title ?? location?.data.name ?? (date ? formatDate(date, 'long') : visit.id);
 const hasBody = Boolean(visit.body?.trim());
 ---
 
 <Base
 	path={`visits/${visit.id}/`}
 	title={title}
-	description={gallery ? `${gallery.data.name} visit.` : undefined}
+	description={location ? `Photos at ${location.data.name}.` : undefined}
 >
 	<main class="page stack">
 		<PageHeader title={title} body={hasBody}>
 			{
-				(date || (gallery && visit.data.title) || exhibitions.length > 0) && (
+				(date || (location && visit.data.title) || exhibitions.length > 0) && (
 					<Fragment slot="facts">
 						{date && (
 							<span>
@@ -51,9 +51,9 @@ const hasBody = Boolean(visit.body?.trim());
 								<a href={route(`exhibitions/${exhibition.id}/`)}>{exhibition.data.title}</a>
 							</span>
 						))}
-						{gallery && visit.data.title && (
+						{location && visit.data.title && (
 							<span>
-								<a href={route(`galleries/${gallery.id}/`)}>{gallery.data.name}</a>
+								<a href={route(`locations/${location.id}/`)}>{location.data.name}</a>
 							</span>
 						)}
 					</Fragment>

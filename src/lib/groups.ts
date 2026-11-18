@@ -1,6 +1,6 @@
 import type { Photo } from './photos';
 import { byChronologicalOrder } from './photos';
-import { getIndex, visitGallery, type Gallery, type Visit } from './content';
+import { getIndex, visitLocation, type Location, type Visit } from './content';
 
 export interface PhotoGroup {
 	/** `visit:<id>` for a visit group, `date:<yyyymmdd>` otherwise. */
@@ -8,7 +8,7 @@ export interface PhotoGroup {
 	datestamp: string;
 	date: Date;
 	visit?: Visit;
-	gallery?: Gallery;
+	location?: Location;
 	photos: Photo[];
 }
 
@@ -32,7 +32,7 @@ export async function groupPhotos(photos: Photo[]): Promise<PhotoGroup[]> {
 				datestamp: photo.datestamp,
 				date: visit?.data.visitedAt ?? photo.date,
 				visit,
-				gallery: visit ? visitGallery(index, visit) : undefined,
+				location: visit ? visitLocation(index, visit) : undefined,
 				photos: [],
 			};
 			groups.set(key, group);
@@ -47,8 +47,8 @@ export async function groupPhotos(photos: Photo[]): Promise<PhotoGroup[]> {
 	return [...groups.values()].sort((a, b) => {
 		const timeDiff = b.date.getTime() - a.date.getTime();
 		if (timeDiff !== 0) return timeDiff;
-		const aName = a.gallery?.data.name ?? a.visit?.data.title ?? a.datestamp;
-		const bName = b.gallery?.data.name ?? b.visit?.data.title ?? b.datestamp;
+		const aName = a.location?.data.name ?? a.visit?.data.title ?? a.datestamp;
+		const bName = b.location?.data.name ?? b.visit?.data.title ?? b.datestamp;
 		return aName.localeCompare(bName);
 	});
 }

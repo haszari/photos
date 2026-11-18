@@ -1,17 +1,17 @@
 import type { Photo } from './photos';
 import {
 	getIndex,
-	visitGallery,
+	visitLocation,
 	type Artist,
 	type Exhibition,
-	type Gallery,
+	type Location,
 	type Visit,
 	type Work,
 } from './content';
 
 export interface PhotoRelations {
 	visit?: Visit;
-	gallery?: Gallery;
+	location?: Location;
 	exhibition?: Exhibition;
 	/** Photo's own exhibition plus any listed on its visit. */
 	exhibitions: Exhibition[];
@@ -21,18 +21,18 @@ export interface PhotoRelations {
 
 /**
  * Resolve every reference on a photo's sidecar. Gallery resolution follows the
- * documented precedence: the visit's gallery wins, `photo.gallery` is the
- * fallback for a gallery with no visit record.
+ * documented precedence: the visit's location wins, `photo.location` is the
+ * fallback for a location with no visit record.
  */
 export async function getRelations(photo: Photo): Promise<PhotoRelations> {
 	const index = await getIndex();
 	const data = photo.entry?.data;
 
 	const visit = data?.visit ? index.visitById.get(data.visit.id) : undefined;
-	const gallery = visit
-		? visitGallery(index, visit)
-		: data?.gallery
-			? index.galleryById.get(data.gallery.id)
+	const location = visit
+		? visitLocation(index, visit)
+		: data?.location
+			? index.locationById.get(data.location.id)
 			: undefined;
 	const exhibition = data?.exhibition
 		? index.exhibitionById.get(data.exhibition.id)
@@ -53,7 +53,7 @@ export async function getRelations(photo: Photo): Promise<PhotoRelations> {
 		.map((reference) => index.workById.get(reference.id))
 		.filter((work): work is Work => Boolean(work));
 
-	return { visit, gallery, exhibition, exhibitions, artists, works };
+	return { visit, location, exhibition, exhibitions, artists, works };
 }
 
 /** Artists credited on a work, resolved through the index. */

@@ -1,7 +1,7 @@
 # Photos
 
-Astro photo gallery. Each photo is a page; photos join optional metadata
-sidecars to artists, works, galleries, visits, exhibitions, and tags at build
+Astro photo site. Each photo is a page; photos join optional metadata sidecars
+to artists, works, locations, visits, exhibitions, and tags at build
 time. No database, no runtime lookup, no client-side data fetching.
 
 Deployed to `https://lab.cartoonbeats.com/photos/` (GitHub Pages project site
@@ -88,7 +88,7 @@ What the export cannot provide, and where it comes from instead:
 | capture time | EXIF `DateTimeOriginal`, or `takenAt` in `photos.yml` |
 | caption / artist hint | XMP `dc:description` → `sourceCaption`, then prompt or `photos.yml` |
 | keywords / tags | XMP `dc:subject`, then prompt or `photos.yml` |
-| gallery, visit, exhibition | prompt or `photos.yml` |
+| location, visit, exhibition | prompt or `photos.yml` |
 | work title and date | `photos.yml` only |
 | alt text | `photos.yml` only |
 
@@ -102,7 +102,7 @@ or answer the prompts.
 
 ```yaml
 visit:
-  gallery: City Gallery Wellington
+  location: City Gallery Wellington
   visitedAt: 2026-11-18
   exhibitions: [Some Exhibition]
 defaults:
@@ -128,10 +128,10 @@ prompts for anything missing.
 ```text
 src/content/
   artists/<id>.md
-  galleries/<id>.md
+  locations/<id>.md
   exhibitions/<id>.md
   works/<id>.md
-  visits/<year>/<yyyymmdd>-<gallery>.md
+  visits/<year>/<yyyymmdd>-<location>.md
   tag-metadata/tags.yml
   photos/<year>/<yyyymmdd>/<yyyymmdd>-<stem>.jpg      # committed full quality
   photos/<year>/<yyyymmdd>/<yyyymmdd>-<stem>.md       # optional metadata
@@ -141,8 +141,8 @@ Sidecars do **not** store an image path: the image is discovered by basename in
 `src/lib/photos.ts`. References use bare entry ids (`colin-mccahon`,
 `2026/20261118-city-gallery-wellington`), not collection-prefixed paths.
 
-A photo's gallery resolves as `photo.visit.gallery` first, then
-`photo.gallery`. Photos group by visit when one is recorded, otherwise by date
+A photo's location resolves as `photo.visit.location` first, then
+`photo.location`. Photos group by visit when one is recorded, otherwise by date
 directory.
 
 ## Licensing
@@ -163,7 +163,7 @@ npm run scaffold:photos -- ./incoming/20261118 --dry-run   # review plan, no wri
 npm run scaffold:photos -- ./incoming/20261118             # prompts + import
 ```
 
-- Missing answers are prompted: directory date (only if EXIF has none), gallery, visit date, tags, whether to import Photos keywords, and which unmatched caption names should become artist records.
+- Missing answers are prompted: directory date (only if EXIF has none), location, visit date, tags, whether to import Photos keywords, and which unmatched caption names should become artist records.
 - Caption prompt lists every name in the run's captions that has no artist record: `[Y] all`, `[n] none`, or numbers like `1,3`. Accepted names become `artists/<slug>.md` and are linked in the sidecars; rejected names stay as `sourceCaption` text with a warning.
 - Prompted answers are written back into `./incoming/20261118/photos.yml` before the confirm step, so an aborted run still keeps your answers. Disable with `--no-save`.
 - Already-imported files are recognised by content hash. The run reports how many and, when interactive, asks `[s]kip` or `[u]pdate metadata`.
@@ -172,7 +172,7 @@ npm run scaffold:photos -- ./incoming/20261118             # prompts + import
 
 ### When no sidecar is written
 
-A sidecar is created only for information worth keeping: `artists`, `works`, `tags`, `alt`, `sourceCaption`, `visit`, `gallery`, `exhibition`, or a note. A capture time or source filename on its own is not enough — both are recoverable, so those photos get an image and no Markdown file.
+A sidecar is created only for information worth keeping: `artists`, `works`, `tags`, `alt`, `sourceCaption`, `visit`, `location`, `exhibition`, or a note. A capture time or source filename on its own is not enough — both are recoverable, so those photos get an image and no Markdown file.
 
 Captions: Apple's `Export Photos…` writes the caption to XMP `dc:description`, which appears as `sourceCaption`. The caption is treated as `Artist | Artist` **only when a segment matches an existing artist name or alias**, or when you accept the create-artists prompt. Anything else stays as source text with a warning — a caption is not assumed to name a person. `Export Unmodified Original` and drag-and-drop can drop captions entirely.
 
@@ -189,7 +189,7 @@ photos without metadata would silently disappear from that page.
 |---|---|
 | `/` | all photos, reverse-chronological, grouped, masonry |
 | `/photos/{yyyymmdd}/{slug}/` | photo or video with metadata box |
-| `/artists/`, `/galleries/`, `/tags/` | indexes |
-| `/artists/{id}/`, `/works/{id}/`, `/galleries/{id}/`, `/visits/{id}/`, `/exhibitions/{id}/`, `/tags/{tag}/` | entity pages |
+| `/artists/`, `/locations/`, `/tags/` | indexes |
+| `/artists/{id}/`, `/works/{id}/`, `/locations/{id}/`, `/visits/{id}/`, `/exhibitions/{id}/`, `/tags/{tag}/` | entity pages |
 
 `<ClientRouter />` handles soft navigation. That is the only client-side script.

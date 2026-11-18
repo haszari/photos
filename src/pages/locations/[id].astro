@@ -5,29 +5,29 @@ import PageHeader from '../../components/PageHeader.astro';
 import PhotoGroup from '../../components/PhotoGroup.astro';
 import { getIndex } from '../../lib/content';
 import { groupPhotos } from '../../lib/groups';
-import { photosForGallery } from '../../lib/queries';
+import { photosForLocation } from '../../lib/queries';
 import { formatDate } from '../../lib/format';
 import { route } from '../../lib/url';
 
 export async function getStaticPaths() {
-	const { galleries } = await getIndex();
-	return galleries.map((gallery) => ({ params: { id: gallery.id }, props: { gallery } }));
+	const { locations } = await getIndex();
+	return locations.map((location) => ({ params: { id: location.id }, props: { location } }));
 }
 
-const { gallery } = Astro.props;
-const [photos, note] = await Promise.all([photosForGallery(gallery.id), render(gallery)]);
+const { location } = Astro.props;
+const [photos, note] = await Promise.all([photosForLocation(location.id), render(location)]);
 const groups = await groupPhotos(photos);
-const facts = [gallery.data.location, gallery.data.city, gallery.data.country].filter(Boolean);
-const hasBody = Boolean(gallery.body?.trim());
+const facts = [location.data.address, location.data.city, location.data.country].filter(Boolean);
+const hasBody = Boolean(location.body?.trim());
 ---
 
 <Base
-	path={`galleries/${gallery.id}/`}
-	title={gallery.data.name}
-	description={`Photos taken at ${gallery.data.name}.`}
+	path={`locations/${location.id}/`}
+	title={location.data.name}
+	description={`Photos taken at ${location.data.name}.`}
 >
 	<main class="page stack">
-		<PageHeader title={gallery.data.name} body={hasBody}>
+		<PageHeader title={location.data.name} body={hasBody}>
 			{
 				facts.length > 0 && (
 					<Fragment slot="facts">

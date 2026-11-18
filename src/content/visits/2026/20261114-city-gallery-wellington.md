@@ -1,4 +1,4 @@
 ---
-gallery: city-gallery-wellington
+location: city-gallery-wellington
 visitedAt: 2026-11-14
 ---

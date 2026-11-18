@@ -1,19 +1,19 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 
 export type Artist = CollectionEntry<'artists'>;
-export type Gallery = CollectionEntry<'galleries'>;
+export type Location = CollectionEntry<'locations'>;
 export type Exhibition = CollectionEntry<'exhibitions'>;
 export type Work = CollectionEntry<'works'>;
 export type Visit = CollectionEntry<'visits'>;
 
 export interface ContentIndex {
 	artists: Artist[];
-	galleries: Gallery[];
+	locations: Location[];
 	exhibitions: Exhibition[];
 	works: Work[];
 	visits: Visit[];
 	artistById: Map<string, Artist>;
-	galleryById: Map<string, Gallery>;
+	locationById: Map<string, Location>;
 	exhibitionById: Map<string, Exhibition>;
 	workById: Map<string, Work>;
 	visitById: Map<string, Visit>;
@@ -27,9 +27,9 @@ export function getIndex(): Promise<ContentIndex> {
 }
 
 async function loadIndex(): Promise<ContentIndex> {
-	const [artists, galleries, exhibitions, works, visits] = await Promise.all([
+	const [artists, locations, exhibitions, works, visits] = await Promise.all([
 		getCollection('artists'),
-		getCollection('galleries'),
+		getCollection('locations'),
 		getCollection('exhibitions'),
 		getCollection('works'),
 		getCollection('visits'),
@@ -40,12 +40,12 @@ async function loadIndex(): Promise<ContentIndex> {
 
 	return {
 		artists: [...artists].sort((a, b) => a.data.name.localeCompare(b.data.name)),
-		galleries: [...galleries].sort((a, b) => a.data.name.localeCompare(b.data.name)),
+		locations: [...locations].sort((a, b) => a.data.name.localeCompare(b.data.name)),
 		exhibitions: [...exhibitions].sort((a, b) => a.data.title.localeCompare(b.data.title)),
 		works: [...works].sort((a, b) => a.data.title.localeCompare(b.data.title)),
 		visits: [...visits],
 		artistById: byId(artists),
-		galleryById: byId(galleries),
+		locationById: byId(locations),
 		exhibitionById: byId(exhibitions),
 		workById: byId(works),
 		visitById: byId(visits),
@@ -60,8 +60,8 @@ export function workArtistIds(work: Work): string[] {
 	return [...ids];
 }
 
-/** Gallery for a visit, if the visit points at one. */
-export function visitGallery(index: ContentIndex, visit: Visit): Gallery | undefined {
-	const gallery = visit.data.gallery;
-	return gallery ? index.galleryById.get(gallery.id) : undefined;
+/** Location for a visit, if the visit points at one. */
+export function visitLocation(index: ContentIndex, visit: Visit): Location | undefined {
+	const location = visit.data.location;
+	return location ? index.locationById.get(location.id) : undefined;
 }

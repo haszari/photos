@@ -1,0 +1,29 @@
+---
+import Base from '../../layouts/Base.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import EntityList from '../../components/EntityList.astro';
+import { getIndex } from '../../lib/content';
+import { photosForLocation, featuredPhoto } from '../../lib/queries';
+
+const { locations } = await getIndex();
+
+const items = await Promise.all(
+	locations.map(async (location) => {
+		const photos = await photosForLocation(location.id);
+		return {
+			href: `locations/${location.id}/`,
+			label: location.data.name,
+			meta: photos.length === 1 ? '1 photo' : `${photos.length} photos`,
+			photo: featuredPhoto(photos, location.data.featuredPhoto),
+		};
+	}),
+);
+---
+
+<Base path="locations/" title="Locations">
+	<main class="page stack">
+		<PageHeader title="Locations" />
+		<EntityList items={items} />
+		{items.length === 0 && <p>No locations yet.</p>}
+	</main>
+</Base>

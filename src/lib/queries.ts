@@ -1,5 +1,5 @@
 import { getPhotos, byCaptureOrder, type Photo } from './photos';
-import { getIndex, workArtistIds, visitGallery } from './content';
+import { getIndex, workArtistIds, visitLocation } from './content';
 import { canonicalTag, getTagRegistry, photoTags } from './tags';
 
 /** Photos whose sidecar references the work. */
@@ -31,12 +31,12 @@ export async function photosForArtist(artistId: string): Promise<Photo[]> {
 	});
 }
 
-/** Photos from a gallery: any visit at that gallery, plus direct gallery refs. */
-export async function photosForGallery(galleryId: string): Promise<Photo[]> {
+/** Photos from a location: any visit there, plus direct location references. */
+export async function photosForLocation(locationId: string): Promise<Photo[]> {
 	const [photos, index] = await Promise.all([getPhotos(), getIndex()]);
 	const visitIds = new Set(
 		index.visits
-			.filter((visit) => visitGallery(index, visit)?.id === galleryId)
+			.filter((visit) => visitLocation(index, visit)?.id === locationId)
 			.map((visit) => visit.id),
 	);
 
@@ -44,7 +44,7 @@ export async function photosForGallery(galleryId: string): Promise<Photo[]> {
 		const data = photo.entry?.data;
 		if (!data) return false;
 		if (data.visit && visitIds.has(data.visit.id)) return true;
-		return data.gallery?.id === galleryId;
+		return data.location?.id === locationId;
 	});
 }
 
