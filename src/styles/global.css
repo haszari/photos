@@ -8,6 +8,8 @@
 	--ink: #0d0d0d;
 	--ink-heading: #2e2e2e;
 	--link: #0e3020;
+	/* Hover only: a touch brighter and greener. */
+	--link-hover: #1a5c3d;
 	--rule: color-mix(in srgb, var(--ink) 18%, transparent);
 	--gap: clamp(0.75rem, 1.5vw, 1.5rem);
 	--page-pad: clamp(1rem, 2.5vw, 2.5rem);
@@ -52,7 +54,7 @@ a {
 }
 
 a:hover {
-	color: color-mix(in srgb, var(--link) 72%, var(--ink));
+	color: var(--link-hover);
 }
 
 :focus-visible {
@@ -131,7 +133,9 @@ p {
 .photo-group__heading {
 	margin-top: calc(var(--gap) / 2);
 	font-size: 1rem;
-	font-weight: 500;
+	/* 400 so the date link renders with the same weight, and therefore the same
+	   apparent green, as links elsewhere. */
+	font-weight: 400;
 	letter-spacing: 0.01em;
 	color: var(--ink);
 }
