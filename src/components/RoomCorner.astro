@@ -18,8 +18,7 @@ const { angle = 20 } = Astro.props;
 <div class="room" aria-hidden="true" style={`--corner-angle: ${angle}deg`}>
 	<div class="room__wall room__wall--left"></div>
 	<div class="room__wall room__wall--right"></div>
-	<div class="room__floor room__floor--wedge"></div>
-	<div class="room__floor room__floor--band"></div>
+	<div class="room__floor"></div>
 </div>
 
 <style>
@@ -49,22 +48,22 @@ const { angle = 20 } = Astro.props;
 		background-color: var(--wall-right);
 	}
 
+	/* One polygon: wedge above, full-width band below. A single element avoids
+	   the hairline that two abutting boxes leave when they round differently. */
 	.room__floor {
+		--wedge: min(55vh, calc(50vw * tan(var(--corner-angle, 20deg))));
 		position: absolute;
 		left: 0;
 		right: 0;
-		background-color: var(--floor);
-	}
-
-	/* Apex on the seam, base on the top edge of the band. */
-	.room__floor--wedge {
-		bottom: var(--floor-band);
-		height: min(55vh, calc(50vw * tan(var(--corner-angle, 20deg))));
-		clip-path: polygon(50% 0, 100% 100%, 0 100%);
-	}
-
-	.room__floor--band {
 		bottom: 0;
-		height: var(--floor-band);
+		height: calc(var(--wedge) + var(--floor-band));
+		background-color: var(--floor);
+		clip-path: polygon(
+			50% 0,
+			100% calc(100% - var(--floor-band)),
+			100% 100%,
+			0 100%,
+			0 calc(100% - var(--floor-band))
+		);
 	}
 </style>
