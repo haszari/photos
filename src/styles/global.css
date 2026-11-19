@@ -413,7 +413,7 @@ p {
 	align-items: center;
 	/* The cap band is centred in the line box, but descenders (p, g, y) pull the
 	   inked shape down, so bias the padding upward a touch. */
-	padding: 0.085em 0.3375em 0.29em;
+	padding: 0.112em 0.3375em 0.263em;
 	border-radius: 0.25em;
 	background-color: color-mix(in srgb, var(--icon) 16%, transparent);
 	color: var(--ink);
