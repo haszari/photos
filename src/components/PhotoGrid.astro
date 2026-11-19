@@ -3,7 +3,7 @@ import PhotoMedia from './PhotoMedia.astro';
 import type { Photo } from '../lib/photos';
 import { photoHref } from '../lib/photos';
 import { route } from '../lib/url';
-import { gridColumns, gridStyle } from '../lib/layout';
+import { gridSizes, gridStyle } from '../lib/layout';
 
 interface Props {
 	photos: Photo[];
@@ -14,14 +14,7 @@ interface Props {
 
 const { photos, eagerCount = 2, sizes } = Astro.props;
 
-const columns = gridColumns(photos.length);
-const resolvedSizes =
-	sizes ??
-	(columns === 1
-		? '100vw'
-		: columns === 2
-			? '(max-width: 560px) 100vw, 50vw'
-			: '(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw');
+const resolvedSizes = sizes ?? gridSizes(photos.length);
 ---
 
 <div class="grid-frame">

@@ -196,7 +196,7 @@ p {
 }
 
 .masonry {
-	columns: var(--masonry-columns, 3);
+	columns: var(--masonry-columns, 1);
 	column-gap: var(--gap);
 	width: 100%;
 }
@@ -213,15 +213,21 @@ p {
 	height: auto;
 }
 
-@media (max-width: 900px) {
+@media (min-width: 560px) {
 	.masonry {
 		columns: var(--masonry-columns-sm, 2);
 	}
 }
 
-@media (max-width: 560px) {
+@media (min-width: 900px) {
 	.masonry {
-		columns: 1;
+		columns: var(--masonry-columns-md, 3);
+	}
+}
+
+@media (min-width: 1500px) {
+	.masonry {
+		columns: var(--masonry-columns-lg, 4);
 	}
 }
 
