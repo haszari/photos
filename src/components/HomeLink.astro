@@ -1,0 +1,9 @@
+---
+/** Home icon: sits in the left gutter, level with the content's first line. */
+import TypeIcon from './TypeIcon.astro';
+import { route } from '../lib/url';
+---
+
+<a class="home-link" href={route('')} aria-label="All photos" title="All photos">
+	<TypeIcon type="home" class="icon-nav" />
+</a>

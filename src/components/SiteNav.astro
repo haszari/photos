@@ -1,0 +1,21 @@
+---
+/** Browse nav: right-aligned, in flow at the end of every page. */
+import TypeIcon from './TypeIcon.astro';
+import { route } from '../lib/url';
+
+const items = [
+	{ type: 'artist' as const, label: 'Artists', href: route('artists/') },
+	{ type: 'location' as const, label: 'Locations', href: route('locations/') },
+	{ type: 'tag' as const, label: 'Tags', href: route('tags/') },
+];
+---
+
+<nav class="site-nav" aria-label="Browse">
+	{
+		items.map((item) => (
+			<a href={item.href} aria-label={item.label} title={item.label}>
+				<TypeIcon type={item.type} class="icon-nav" />
+			</a>
+		))
+	}
+</nav>

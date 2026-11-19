@@ -5,6 +5,7 @@ import { getPhotos } from '../lib/photos';
 import { groupPhotos } from '../lib/groups';
 import { formatDate } from '../lib/format';
 import { route } from '../lib/url';
+import TypeIcon from '../components/TypeIcon.astro';
 
 const photos = await getPhotos();
 const groups = await groupPhotos(photos);
@@ -20,15 +21,21 @@ const groups = await groupPhotos(photos);
 						<span>
 							<time datetime={group.date.toISOString().slice(0, 10)}>
 								{group.visit ? (
-									<a href={route(`visits/${group.visit.id}/`)}>{formatDate(group.date)}</a>
+									<a href={route(`visits/${group.visit.id}/`)}>
+										{formatDate(group.date)}
+									</a>
 								) : (
 									formatDate(group.date)
 								)}
 							</time>
+							{group.visit && <TypeIcon type="visit" class="icon-inline" />}
 						</span>
 						{group.location && (
 							<span>
-								<a href={route(`locations/${group.location.id}/`)}>{group.location.data.name}</a>
+								<a href={route(`locations/${group.location.id}/`)}>
+									{group.location.data.name}
+								</a>
+								<TypeIcon type="location" class="icon-inline" />
 							</span>
 						)}
 						{!group.location && group.visit?.data.title && (

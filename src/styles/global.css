@@ -10,11 +10,16 @@
 	--link: #0e3020;
 	/* Hover only: a touch brighter and greener. */
 	--link-hover: #1a5c3d;
-	--rule: color-mix(in srgb, var(--ink) 18%, transparent);
 	--gap: clamp(0.75rem, 1.5vw, 1.5rem);
 	--page-pad: clamp(1rem, 2.5vw, 2.5rem);
-	/* Grid and its caption share one width: most of the window, centred. */
-	--grid-width: min(100%, 92vw);
+	/* Icons: one subtle grey, halfway from the floor to ink. */
+	--icon: color-mix(in srgb, var(--floor) 50%, var(--ink));
+	--icon-nav: 1.5rem;
+	/* One heading size for every page top. */
+	--h1-size: clamp(1.5rem, 2.5vw, 2rem);
+	--nav-gap: 1.25rem;
+	/* The top bar: one page pad above the icons, half a pad below. */
+	--topbar-height: calc(var(--page-pad) * 1.5 + var(--icon-nav));
 	--font-sans: ui-sans-serif, system-ui, sans-serif;
 
 	color-scheme: light;
@@ -41,11 +46,57 @@ body {
 	text-rendering: optimizeLegibility;
 }
 
-/* Every page shares one centred container, so headings, prose and grids line up. */
+/* Shell: full-window content, inset by one page pad. */
+.shell {
+	position: relative;
+	width: 100%;
+	padding-inline: var(--page-pad);
+}
+
+/* One row at the top of every page: home on the left, browse nav on the right. */
+.topbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--gap);
+	padding-block: var(--page-pad) calc(var(--page-pad) * 0.5);
+}
+
+.home-link,
+.site-nav a {
+	display: inline-flex;
+}
+
 .page {
-	width: var(--grid-width);
-	margin-inline: auto;
-	padding-block: var(--page-pad);
+	width: 100%;
+	padding-block-end: var(--page-pad);
+}
+
+.icon-nav {
+	width: var(--icon-nav);
+	height: var(--icon-nav);
+	color: var(--icon);
+	transition: color 120ms ease;
+}
+
+a:hover .icon-nav,
+a:focus-visible .icon-nav {
+	color: var(--ink);
+}
+
+/* After a word or link: scales with the text, always a little smaller. */
+.icon-inline {
+	width: 1em;
+	height: 1em;
+	margin-inline-start: 0.3em;
+	font-size: clamp(0.5rem, 0.35em, 0.9rem);
+	color: var(--icon);
+	vertical-align: baseline;
+}
+
+.site-nav {
+	display: flex;
+	gap: var(--nav-gap);
 }
 
 a {
@@ -155,13 +206,11 @@ p {
 
 /* Photo detail */
 .photo-page {
-	width: var(--grid-width);
-	margin-inline: auto;
-	min-height: 100svh;
+	width: 100%;
 	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding-block: var(--page-pad);
+	flex-direction: column;
+	justify-content: flex-start;
+	padding-block-end: var(--page-pad);
 }
 
 /* The inner row is only as tall as the image, so the metadata box can sit
@@ -189,7 +238,8 @@ p {
 .photo-page__figure video {
 	display: block;
 	max-width: 100%;
-	max-height: calc(100svh - var(--page-pad) * 2);
+	/* Fit the viewport under the top bar. */
+	max-height: calc(100svh - var(--topbar-height) - var(--page-pad));
 	width: auto;
 	height: auto;
 	object-fit: contain;
@@ -296,11 +346,6 @@ p {
 	gap: var(--gap);
 }
 
-.entity-list li {
-	border-top: 1px solid var(--rule);
-	padding-top: 0.5rem;
-}
-
 .entity-list .count {
 	font-size: 0.8rem;
 }
@@ -328,7 +373,7 @@ p {
 }
 
 .page-header h1 {
-	font-size: clamp(1.5rem, 2.5vw, 2rem);
+	font-size: var(--h1-size);
 }
 
 /* External indicator: small, raised, not part of the link text. */

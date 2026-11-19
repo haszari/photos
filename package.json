@@ -16,6 +16,7 @@
     "convert:videos": "node scripts/convert-videos.mjs"
   },
   "dependencies": {
+    "@lucide/astro": "^1.75.0",
     "astro": "^7.4.12"
   },
   "devDependencies": {

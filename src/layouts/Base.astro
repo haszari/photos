@@ -4,6 +4,8 @@ import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import { url } from '../lib/url';
 import RoomCorner from '../components/RoomCorner.astro';
+import HomeLink from '../components/HomeLink.astro';
+import SiteNav from '../components/SiteNav.astro';
 import { CREATOR, PHOTO_LICENSE, SITE_URL } from '../lib/license';
 
 interface Props {
@@ -46,6 +48,12 @@ const siteJsonLd = {
 	</head>
 	<body>
 		<RoomCorner />
-		<slot />
+		<div class="shell">
+			<header class="topbar">
+				<HomeLink />
+				<SiteNav />
+			</header>
+			<slot />
+		</div>
 	</body>
 </html>

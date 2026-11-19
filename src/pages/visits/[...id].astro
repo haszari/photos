@@ -2,6 +2,7 @@
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import PageHeader from '../../components/PageHeader.astro';
+import TypeIcon from '../../components/TypeIcon.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import EntityLinks from '../../components/EntityLinks.astro';
 import { getIndex, visitLocation } from '../../lib/content';
@@ -55,17 +56,20 @@ const primary = links[0];
 						{exhibitions.map((exhibition) => (
 							<span>
 								<a href={route(`exhibitions/${exhibition.id}/`)}>{exhibition.data.title}</a>
+								<TypeIcon type="exhibition" class="icon-inline" />
 							</span>
 						))}
 						{links.length > 1 && <EntityLinks links={links} />}
 						{location && visit.data.title && (
 							<span>
 								<a href={route(`locations/${location.id}/`)}>{location.data.name}</a>
+								<TypeIcon type="location" class="icon-inline" />
 							</span>
 						)}
 					</Fragment>
 				)
 			}
+			<TypeIcon slot="icon" type="visit" />
 			<note.Content />
 		</PageHeader>
 		<PhotoGrid photos={photos} />

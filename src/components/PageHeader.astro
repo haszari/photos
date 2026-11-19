@@ -39,6 +39,7 @@ const hasFacts = Astro.slots.has('facts');
 				title
 			)
 		}
+		<slot name="icon" />
 	</Heading>
 	{hasFacts && (
 		<p class="facts">

@@ -1,0 +1,27 @@
+---
+/**
+ * One icon per record type, always the same Lucide glyph and stroke weight.
+ * `icon-nav` for navigation, `icon-inline` after a word or link.
+ */
+import { CalendarDays, Image, Layers, MapPin, Tag, UserRound } from '@lucide/astro';
+
+interface Props {
+	type: 'home' | 'artist' | 'location' | 'tag' | 'visit' | 'exhibition';
+	class?: string;
+}
+
+const { type, class: className = 'icon-inline' } = Astro.props;
+
+const icons = {
+	home: Image,
+	artist: UserRound,
+	location: MapPin,
+	tag: Tag,
+	visit: CalendarDays,
+	exhibition: Layers,
+};
+
+const Icon = icons[type];
+---
+
+<Icon class={className} stroke-width={2.5} aria-hidden="true" />
