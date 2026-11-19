@@ -1,7 +1,7 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import PageHeader from '../../components/PageHeader.astro';
+import PageFacts from '../../components/PageFacts.astro';
 import TypeIcon from '../../components/TypeIcon.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import EntityLinks from '../../components/EntityLinks.astro';
@@ -32,14 +32,11 @@ const primary = links[0];
 	path={`works/${work.id}/`}
 	title={work.data.title}
 	description={`Photos of ${work.data.title}.`}
+	headingHref={primary?.url}
+	headingExternal={links.length === 1}
 >
 	<main class="page stack">
-		<PageHeader
-			title={work.data.title}
-			body={hasBody}
-			href={primary?.url}
-			external={links.length === 1}
-		>
+		<PageFacts body={hasBody}>
 			{
 				(work.data.date || artists.length > 0 || links.length > 1) && (
 					<Fragment slot="facts">
@@ -55,7 +52,7 @@ const primary = links[0];
 				)
 			}
 			<note.Content />
-		</PageHeader>
+		</PageFacts>
 		<PhotoGrid photos={photos} />
 		{photos.length === 0 && <p>No photos yet.</p>}
 	</main>

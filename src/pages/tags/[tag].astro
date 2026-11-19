@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import PageHeader from '../../components/PageHeader.astro';
+import PageFacts from '../../components/PageFacts.astro';
 import TypeIcon from '../../components/TypeIcon.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import { getTag, getTags } from '../../lib/tags';
@@ -17,8 +17,9 @@ const label = tag?.label ?? slug;
 ---
 
 <Base path={`tags/${slug}/`} title={label} description={tag?.description}>
+	<TypeIcon slot="heading-icon" type="tag" />
 	<main class="page stack">
-		<PageHeader title={label} body={false}>
+		<PageFacts body={false}>
 			{
 				tag?.description && (
 					<Fragment slot="facts">
@@ -26,8 +27,7 @@ const label = tag?.label ?? slug;
 					</Fragment>
 				)
 			}
-			<TypeIcon slot="icon" type="tag" />
-		</PageHeader>
+					</PageFacts>
 		<PhotoGrid photos={photos} />
 		{photos.length === 0 && <p>No photos yet.</p>}
 	</main>

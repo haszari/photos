@@ -9,13 +9,31 @@ import SiteNav from '../components/SiteNav.astro';
 import { CREATOR, PHOTO_LICENSE, SITE_URL } from '../lib/license';
 
 interface Props {
+	/** Document title (plus " Photos") and, by default, the visible heading. */
 	title?: string;
+	/** Heading text when it differs from the document title. */
+	heading?: string;
 	description?: string;
 	/** Absolute path of this page, used for licence metadata. */
 	path?: string;
+	/** External page for the heading, when the record has one. */
+	headingHref?: string;
+	/** Show the external indicator next to the heading. */
+	headingExternal?: boolean;
+	/** Keep an h1 for structure and screen readers without showing it. */
+	hideHeading?: boolean;
 }
 
-const { title, description, path = '' } = Astro.props;
+const {
+	title,
+	heading,
+	description,
+	path = '',
+	headingHref,
+	headingExternal = false,
+	hideHeading = false,
+} = Astro.props;
+const headingText = heading ?? title ?? '';
 const pageTitle = title ? `${title} Photos` : 'Photos';
 const canonical = new URL(path, SITE_URL).href;
 const siteJsonLd = {
@@ -50,7 +68,26 @@ const siteJsonLd = {
 		<RoomCorner />
 		<div class="shell">
 			<header class="topbar">
-				<HomeLink />
+				<div class="topbar__title">
+					<HomeLink />
+					<h1 class={hideHeading ? 'visually-hidden' : undefined}>
+						{
+							headingHref ? (
+								<a href={headingHref} rel="noopener noreferrer">
+									{headingText}
+									{headingExternal && (
+										<span class="external-mark" aria-hidden="true">
+											↗
+										</span>
+									)}
+								</a>
+							) : (
+								headingText
+							)
+						}
+						<slot name="heading-icon" />
+					</h1>
+				</div>
 				<SiteNav />
 			</header>
 			<slot />

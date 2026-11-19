@@ -46,7 +46,7 @@ const cardExhibitions = relations.exhibitions.filter(
 );
 ---
 
-<Base title={pageTitle} description={description || undefined} path={photoHref(photo)}>
+<Base title={pageTitle} heading={heading} hideHeading description={description || undefined} path={photoHref(photo)}>
 	<Fragment slot="head">
 		<script
 			type="application/ld+json"
@@ -60,7 +60,6 @@ const cardExhibitions = relations.exhibitions.filter(
 		/>
 	</Fragment>
 	<main class="photo-page">
-		<h1 class="visually-hidden">{heading}</h1>
 		<div class="photo-page__inner">
 		<figure class="photo-page__figure">
 			<PhotoMedia

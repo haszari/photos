@@ -1,7 +1,7 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import PageHeader from '../../components/PageHeader.astro';
+import PageFacts from '../../components/PageFacts.astro';
 import TypeIcon from '../../components/TypeIcon.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import EntityLinks from '../../components/EntityLinks.astro';
@@ -39,9 +39,12 @@ const primary = links[0];
 	path={`visits/${visit.id}/`}
 	title={title}
 	description={location ? `Photos at ${location.data.name}.` : undefined}
+	headingHref={primary?.url}
+	headingExternal={links.length === 1}
 >
+	<TypeIcon slot="heading-icon" type="visit" />
 	<main class="page stack">
-		<PageHeader title={title} body={hasBody} href={primary?.url} external={links.length === 1}>
+		<PageFacts body={hasBody}>
 			{
 				(date ||
 					(location && visit.data.title) ||
@@ -69,9 +72,8 @@ const primary = links[0];
 					</Fragment>
 				)
 			}
-			<TypeIcon slot="icon" type="visit" />
-			<note.Content />
-		</PageHeader>
+						<note.Content />
+		</PageFacts>
 		<PhotoGrid photos={photos} />
 		{photos.length === 0 && <p>No photos yet.</p>}
 	</main>

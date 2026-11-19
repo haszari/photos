@@ -1,7 +1,7 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import PageHeader from '../../components/PageHeader.astro';
+import PageFacts from '../../components/PageFacts.astro';
 import TypeIcon from '../../components/TypeIcon.astro';
 import PhotoGroup from '../../components/PhotoGroup.astro';
 import EntityLinks from '../../components/EntityLinks.astro';
@@ -29,14 +29,12 @@ const primary = links[0];
 	path={`locations/${location.id}/`}
 	title={location.data.name}
 	description={`Photos taken at ${location.data.name}.`}
+	headingHref={primary?.url}
+	headingExternal={links.length === 1}
 >
+	<TypeIcon slot="heading-icon" type="location" />
 	<main class="page stack">
-		<PageHeader
-			title={location.data.name}
-			body={hasBody}
-			href={primary?.url}
-			external={links.length === 1}
-		>
+		<PageFacts body={hasBody}>
 			{
 				(facts.length > 0 || links.length > 1) && (
 					<Fragment slot="facts">
@@ -47,9 +45,8 @@ const primary = links[0];
 					</Fragment>
 				)
 			}
-			<TypeIcon slot="icon" type="location" />
-			<note.Content />
-		</PageHeader>
+						<note.Content />
+		</PageFacts>
 
 		{
 			groups.map((group) => (

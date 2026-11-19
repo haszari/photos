@@ -11,9 +11,8 @@ const photos = await getPhotos();
 const groups = await groupPhotos(photos);
 ---
 
-<Base>
+<Base heading="All photos" hideHeading>
 	<main class="page stack">
-		<h1 class="visually-hidden">All photos</h1>
 		{
 			groups.map((group) => (
 				<PhotoGroup photos={group.photos}>
