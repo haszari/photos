@@ -1,7 +1,10 @@
 ---
 /**
  * Shared page header: title, one facts line, optional body text.
- * Every entity page uses this so headings sit at the same inset and rhythm.
+ *
+ * A record with external links renders its title as the primary link. With a
+ * single link the title carries an external indicator; with several, the first
+ * is the title link and the rest are listed in the facts line.
  */
 interface Props {
 	title: string;
@@ -9,15 +12,34 @@ interface Props {
 	level?: 1 | 2;
 	/** Render the default slot as body text; false for records with no body. */
 	body?: boolean;
+	/** External page for the title, if the record has one. */
+	href?: string;
+	/** Show the external indicator next to the title. */
+	external?: boolean;
 }
 
-const { title, level = 1, body = false } = Astro.props;
+const { title, level = 1, body = false, href, external = false } = Astro.props;
 const Heading = `h${level}` as 'h1' | 'h2';
 const hasFacts = Astro.slots.has('facts');
 ---
 
 <header class="page-header">
-	<Heading>{title}</Heading>
+	<Heading>
+		{
+			href ? (
+				<a href={href} rel="noopener noreferrer">
+					{title}
+					{external && (
+						<span class="external-mark" aria-hidden="true">
+							↗
+						</span>
+					)}
+				</a>
+			) : (
+				title
+			)
+		}
+	</Heading>
 	{hasFacts && (
 		<p class="facts">
 			<slot name="facts" />

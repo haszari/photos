@@ -21,16 +21,22 @@ const [photos, note] = await Promise.all([photosForExhibition(exhibition.id), re
 const dates = formatDateRange(exhibition.data.startDate, exhibition.data.endDate);
 const hasBody = Boolean(exhibition.body?.trim());
 const links = exhibition.data.links ?? [];
+const primary = links[0];
 ---
 
 <Base path={`exhibitions/${exhibition.id}/`} title={exhibition.data.title}>
 	<main class="page stack">
-		<PageHeader title={exhibition.data.title} body={hasBody}>
+		<PageHeader
+			title={exhibition.data.title}
+			body={hasBody}
+			href={primary?.url}
+			external={links.length === 1}
+		>
 			{
-				(dates || links.length > 0) && (
+				(dates || links.length > 1) && (
 					<Fragment slot="facts">
 						{dates && <span>{dates}</span>}
-						<EntityLinks links={links} />
+						{links.length > 1 && <EntityLinks links={links} />}
 					</Fragment>
 				)
 			}

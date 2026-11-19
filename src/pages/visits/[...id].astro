@@ -30,6 +30,8 @@ const date = visit.data.visitedAt;
 const title =
 	visit.data.title ?? location?.data.name ?? (date ? formatDate(date, 'long') : visit.id);
 const hasBody = Boolean(visit.body?.trim());
+const links = visit.data.links ?? [];
+const primary = links[0];
 ---
 
 <Base
@@ -38,12 +40,12 @@ const hasBody = Boolean(visit.body?.trim());
 	description={location ? `Photos at ${location.data.name}.` : undefined}
 >
 	<main class="page stack">
-		<PageHeader title={title} body={hasBody}>
+		<PageHeader title={title} body={hasBody} href={primary?.url} external={links.length === 1}>
 			{
 				(date ||
 					(location && visit.data.title) ||
 					exhibitions.length > 0 ||
-					visit.data.links?.length) && (
+					links.length > 1) && (
 					<Fragment slot="facts">
 						{date && (
 							<span>
@@ -55,7 +57,7 @@ const hasBody = Boolean(visit.body?.trim());
 								<a href={route(`exhibitions/${exhibition.id}/`)}>{exhibition.data.title}</a>
 							</span>
 						))}
-						<EntityLinks links={visit.data.links ?? []} />
+						{links.length > 1 && <EntityLinks links={links} />}
 						{location && visit.data.title && (
 							<span>
 								<a href={route(`locations/${location.id}/`)}>{location.data.name}</a>

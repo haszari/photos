@@ -331,6 +331,15 @@ p {
 	font-size: clamp(1.5rem, 2.5vw, 2rem);
 }
 
+/* External indicator: small, raised, not part of the link text. */
+.external-mark {
+	margin-inline-start: 0.2em;
+	font-size: 0.65em;
+	vertical-align: super;
+	line-height: 0;
+	color: var(--ink);
+}
+
 .facts {
 	margin: 0;
 	display: flex;

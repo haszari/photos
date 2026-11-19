@@ -21,6 +21,7 @@ const groups = await groupPhotos(photos);
 const facts = [location.data.address, location.data.city, location.data.country].filter(Boolean);
 const hasBody = Boolean(location.body?.trim());
 const links = location.data.links ?? [];
+const primary = links[0];
 ---
 
 <Base
@@ -29,14 +30,19 @@ const links = location.data.links ?? [];
 	description={`Photos taken at ${location.data.name}.`}
 >
 	<main class="page stack">
-		<PageHeader title={location.data.name} body={hasBody}>
+		<PageHeader
+			title={location.data.name}
+			body={hasBody}
+			href={primary?.url}
+			external={links.length === 1}
+		>
 			{
-				(facts.length > 0 || links.length > 0) && (
+				(facts.length > 0 || links.length > 1) && (
 					<Fragment slot="facts">
 						{facts.map((fact) => (
 							<span>{fact}</span>
 						))}
-						<EntityLinks links={links} />
+						{links.length > 1 && <EntityLinks links={links} />}
 					</Fragment>
 				)
 			}

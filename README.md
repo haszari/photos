@@ -101,6 +101,10 @@ links:
     url: https://www.tate.org.uk/art/artists/example
 ```
 
+**Where they show.** A record with one link renders its title as that link with a
+small `↗` indicator. With several links, the title links the first and all of
+them are listed in the facts line.
+
 **Special case.** An exhibition whose title matches one of the photo's artist
 names is hidden in the photo metadata card — it would just repeat the artist
 line. It still appears on the visit page and has its own page.

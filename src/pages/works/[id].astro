@@ -23,6 +23,8 @@ const [photos, note, index] = await Promise.all([
 
 const artists = workArtists(index, work);
 const hasBody = Boolean(work.body?.trim());
+const links = work.data.links ?? [];
+const primary = links[0];
 ---
 
 <Base
@@ -31,9 +33,14 @@ const hasBody = Boolean(work.body?.trim());
 	description={`Photos of ${work.data.title}.`}
 >
 	<main class="page stack">
-		<PageHeader title={work.data.title} body={hasBody}>
+		<PageHeader
+			title={work.data.title}
+			body={hasBody}
+			href={primary?.url}
+			external={links.length === 1}
+		>
 			{
-				(work.data.date || artists.length > 0 || work.data.links?.length) && (
+				(work.data.date || artists.length > 0 || links.length > 1) && (
 					<Fragment slot="facts">
 						{work.data.date && <span>{work.data.date}</span>}
 						{artists.map((artist) => (
@@ -41,7 +48,7 @@ const hasBody = Boolean(work.body?.trim());
 								<a href={route(`artists/${artist.id}/`)}>{artist.data.name}</a>
 							</span>
 						))}
-						<EntityLinks links={work.data.links ?? []} />
+						{links.length > 1 && <EntityLinks links={links} />}
 					</Fragment>
 				)
 			}
