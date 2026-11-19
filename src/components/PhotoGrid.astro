@@ -18,7 +18,7 @@ const resolvedSizes = sizes ?? gridSizes(photos.length);
 ---
 
 <div class="grid-frame">
-	<div class="masonry" style={gridStyle(photos.length)}>
+	<div class:list={['masonry', { 'masonry--single': photos.length === 1 }]} style={gridStyle(photos.length)}>
 		{
 			photos.map((photo, index) => (
 				<div class="masonry__item">

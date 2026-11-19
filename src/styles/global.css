@@ -225,6 +225,16 @@ p {
 	}
 }
 
+/* One photo on its own: let it use the viewport height rather than blowing up
+   to the full column width, which would push a tall image past the fold. */
+.masonry--single .masonry__item img,
+.masonry--single .masonry__item video {
+	width: auto;
+	max-width: 100%;
+	max-height: calc(100svh - var(--topbar-height) - var(--page-pad) * 2);
+	margin-inline: auto;
+}
+
 /* Date / visit heading below a photo group, in the grid's inset. */
 .photo-group + .photo-group {
 	margin-top: clamp(1rem, 2.5vw, 1.75rem);
