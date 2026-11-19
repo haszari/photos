@@ -15,6 +15,16 @@ interface TagMetadata {
 	aliases?: string[];
 }
 
+/**
+ * Tags that describe the medium or the delivery format rather than the subject.
+ * They stay in the photo's sidecar (the import writes them, and they are useful
+ * when searching the archive) but are hidden from every view: no pill in the
+ * metadata card, no entry in the cloud, no page of their own.
+ *
+ * Slugs, i.e. after `normalizeTag()`.
+ */
+export const HIDDEN_TAGS = new Set(['art', 'desktop', 'wallpaper', 'mobile']);
+
 export interface TagRegistry {
 	/** Canonical slug -> display metadata. */
 	metadata: Map<string, TagMetadata>;
@@ -88,13 +98,14 @@ export function photoTags(
 	return [...slugs];
 }
 
-/** All tags in use, with counts and display metadata. */
+/** All tags in use, with counts and display metadata. Hidden tags are excluded. */
 export async function getTags(): Promise<TagInfo[]> {
 	const [photos, registry] = await Promise.all([getPhotos(), getTagRegistry()]);
 	const counts = new Map<string, number>();
 
 	for (const photo of photos) {
 		for (const slug of photoTags(photo.entry?.data.tags, registry)) {
+			if (HIDDEN_TAGS.has(slug)) continue;
 			counts.set(slug, (counts.get(slug) ?? 0) + 1);
 		}
 	}

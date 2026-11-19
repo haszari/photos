@@ -209,6 +209,12 @@ A photo's location resolves as `photo.visit.location` first, then
 `photo.location`. Photos group by visit when one is recorded, otherwise by date
 directory.
 
+**Hidden tags.** Tags that describe the medium or the delivery format rather than
+the subject — `art`, `desktop`, `wallpaper`, `mobile` — stay in the sidecar but are
+filtered out everywhere they would otherwise appear: the metadata card, the tag
+cloud, and the tag pages (so those four have no page at all). The list is
+`HIDDEN_TAGS` in `src/lib/tags.ts`.
+
 ## Licensing
 
 - **Photos, captions and notes** — [CC BY 4.0](LICENSE). Attribution: Rua Haszard (haszari), https://cartoonbeats.com, source https://lab.cartoonbeats.com/photos/.
