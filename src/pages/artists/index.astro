@@ -13,7 +13,6 @@ const items = await Promise.all(
 		return {
 			href: `artists/${artist.id}/`,
 			label: artist.data.name,
-			meta: photos.length === 1 ? '1 photo' : `${photos.length} photos`,
 			photo: featuredPhoto(photos, artist.data.featuredPhoto),
 		};
 	}),

@@ -13,7 +13,6 @@ const items = await Promise.all(
 		return {
 			href: `locations/${location.id}/`,
 			label: location.data.name,
-			meta: photos.length === 1 ? '1 photo' : `${photos.length} photos`,
 			photo: featuredPhoto(photos, location.data.featuredPhoto),
 		};
 	}),

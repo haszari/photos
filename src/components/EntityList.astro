@@ -6,7 +6,6 @@ import { route } from '../lib/url';
 interface Item {
 	href: string;
 	label: string;
-	meta?: string;
 	photo?: Photo;
 }
 
@@ -31,7 +30,6 @@ const { items } = Astro.props;
 						/>
 					)}
 					<span>{item.label}</span>
-					{item.meta && <span class="count"> {item.meta}</span>}
 				</a>
 			</li>
 		))

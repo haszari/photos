@@ -394,10 +394,6 @@ p {
 	gap: var(--gap);
 }
 
-.entity-list .count {
-	font-size: 0.8rem;
-}
-
 /* Tag cloud: pills whose font-size is set per tag (see TagCloud.astro). The
    container font-size is the scale everything is measured against. */
 .tag-cloud {
