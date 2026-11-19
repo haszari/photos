@@ -90,16 +90,7 @@ p {
 }
 
 /* Masonry: CSS columns keep the site JS-free. A flex frame centres the grid
-   while it still takes most of the window; the caption shares its width.
-   Multicol is column-major, so items read top-to-bottom per column rather than
-   across rows, and columns end unevenly unless the asset count divides by the
-   column count. Acceptable for browsing; see the note below to upgrade.
-   TODO: adopt native masonry when it is safe to rely on — Safari's
-   `grid-template-rows: masonry` and Chrome's `item-flow: row masonry` give
-   row-major packing with no JS. Wire it behind
-   `@supports (grid-template-rows: masonry)` or `@supports (item-flow: masonry)`
-   once both have stable, matching syntax, keeping the columns layout above as
-   the fallback. */
+   while it still takes most of the window; the caption shares its width. */
 .grid-frame {
 	display: flex;
 	justify-content: center;
@@ -113,9 +104,7 @@ p {
 
 .masonry__item {
 	break-inside: avoid;
-	/* Half the gutter: columns rarely end at the same height, so a tighter
-	   vertical rhythm stops the mismatch reading as a broken grid. */
-	margin-bottom: calc(var(--gap) * 0.5);
+	margin-bottom: var(--gap);
 }
 
 .masonry__item img,
