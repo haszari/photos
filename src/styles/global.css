@@ -62,9 +62,10 @@ body {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
-	flex-wrap: wrap;
-	column-gap: var(--gap);
-	row-gap: 0.5rem;
+	/* Never wrap the row: the title wraps inside its own box instead, so the nav
+	   icons always share the title's first-line baseline. */
+	flex-wrap: nowrap;
+	gap: var(--gap);
 	padding-block: var(--page-pad) calc(var(--page-pad) * 0.5);
 }
 
@@ -72,11 +73,13 @@ body {
 	display: flex;
 	align-items: baseline;
 	gap: var(--gap);
+	flex: 1 1 auto;
 	min-width: 0;
 }
 
 .topbar__title h1 {
 	font-size: var(--h1-size);
+	overflow-wrap: break-word;
 }
 
 /* Pages whose heading is only there for structure keep its line box, so the bar
@@ -124,9 +127,8 @@ a:focus-visible .icon-nav {
 
 .site-nav {
 	display: flex;
+	flex: 0 0 auto;
 	gap: var(--nav-gap);
-	/* Stay right-aligned even when the bar wraps onto a second row. */
-	margin-inline-start: auto;
 }
 
 a {
