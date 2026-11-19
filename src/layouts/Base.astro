@@ -53,6 +53,9 @@ const siteJsonLd = {
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<Font cssVariable="--font-sans" preload />
+		{/* Marks a script-capable browser before first paint, so the photo page can
+		    hide its media until it has loaded without hiding it from anyone else. */}
+		<script is:inline>document.documentElement.classList.add('js');</script>
 		<ClientRouter />
 		<title>{pageTitle}</title>
 		{description && <meta name="description" content={description} />}

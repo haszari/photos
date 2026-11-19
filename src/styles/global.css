@@ -271,6 +271,28 @@ p {
 	padding-block-end: var(--page-pad);
 }
 
+/* Until the media has decoded there is nothing to look at, and the card would
+   arrive first. Hold both back, then fade them in together — quickly, so the
+   page does not feel like it is waiting on an animation. Where scripting is off
+   nothing is hidden, so the content is always reachable. */
+html.js .photo-page:not(.is-loaded) .photo-page__figure,
+html.js .photo-page:not(.is-loaded) .photo-meta {
+	opacity: 0;
+}
+
+.photo-page.is-loaded .photo-page__figure,
+.photo-page.is-loaded .photo-meta {
+	opacity: 1;
+	transition: opacity 100ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.photo-page.is-loaded .photo-page__figure,
+	.photo-page.is-loaded .photo-meta {
+		transition: none;
+	}
+}
+
 /* The inner row is only as tall as the image, so the metadata box can sit
    flush with the image's bottom edge while the pair stays centred. */
 .photo-page__inner {
