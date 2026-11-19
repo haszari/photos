@@ -13,6 +13,9 @@ Deploys are automatic: `.github/workflows/deploy.yml` builds with
 (or from the Actions tab). GitHub needs **Settings → Pages → Source: GitHub
 Actions** once per repo.
 
+Node: `.nvmrc` and CI both use 26 (Active LTS); `package.json` accepts 24 and
+up so an older local install still builds.
+
 ## Commands
 
 ```sh
