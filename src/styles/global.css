@@ -333,10 +333,11 @@ p {
 
 /* External indicator: small, raised, not part of the link text. */
 .external-mark {
-	margin-inline-start: 0.2em;
-	font-size: 0.65em;
-	vertical-align: super;
-	line-height: 0;
+	margin-inline-start: 0.12em;
+	/* 30-50% of the title size: 0.4em, floored so small headings keep it legible. */
+	font-size: max(0.5rem, 0.4em);
+	line-height: 1;
+	vertical-align: baseline;
 	color: var(--ink);
 }
 
