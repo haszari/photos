@@ -23,14 +23,7 @@ const pillSize = (count: number) => (0.5 * (Math.log(Math.max(count, 1)) + 1)).t
 	{
 		tags.map((tag) => (
 			<li style={`font-size: ${pillSize(tag.count)}em`}>
-				<a class="tag-pill" href={route(`tags/${tag.slug}/`)}>
-					{tag.label}
-					{tag.count > 1 && (
-						<span class="tag-pill__count" aria-label={`${tag.count} photos`}>
-							{tag.count}
-						</span>
-					)}
-				</a>
+				<a class="tag-pill" href={route(`tags/${tag.slug}/`)}>{tag.label}</a>
 			</li>
 		))
 	}
