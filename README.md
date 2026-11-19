@@ -8,6 +8,11 @@ Deployed to `https://lab.cartoonbeats.com/photos/` (GitHub Pages project site
 under a user custom domain), so every internal link goes through
 `src/lib/url.ts`.
 
+Deploys are automatic: `.github/workflows/deploy.yml` builds with
+`withastro/action` and publishes with `deploy-pages` on every push to `main`
+(or from the Actions tab). GitHub needs **Settings → Pages → Source: GitHub
+Actions** once per repo.
+
 ## Commands
 
 ```sh
