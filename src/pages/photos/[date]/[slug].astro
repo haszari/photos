@@ -155,7 +155,8 @@ const cardExhibitions = relations.exhibitions.filter(
 	</main>
 <script>
 	// Reveal the photo and its card together, once the media is ready to paint.
-	// Registered as a module so it also runs on client-side navigations.
+	// `decode()` is the part that matters: `complete` only means the bytes are
+	// here, and the card would otherwise appear a frame or two before the image.
 	function revealWhenReady() {
 		const page = document.querySelector('.photo-page');
 		const media = document.querySelector('.photo-page__figure img, .photo-page__figure video');
@@ -163,25 +164,22 @@ const cardExhibitions = relations.exhibitions.filter(
 
 		const reveal = () => page.classList.add('is-loaded');
 
-		if (!media) {
-			reveal();
-			return;
-		}
+		const ready = media?.decode
+			? media.decode()
+			: new Promise<void>((resolve) => {
+					if (!media || media.complete || media.readyState >= 2) resolve();
+					else {
+						media.addEventListener('load', () => resolve(), { once: true });
+						media.addEventListener('loadeddata', () => resolve(), { once: true });
+						media.addEventListener('error', () => resolve(), { once: true });
+					}
+				});
 
-		if (media.tagName === 'IMG') {
-			if (media.complete && media.naturalWidth > 0) reveal();
-			else {
-				media.addEventListener('load', reveal, { once: true });
-				media.addEventListener('error', reveal, { once: true });
-			}
-			return;
-		}
-
-		if (media.readyState >= 2) reveal();
-		else {
-			media.addEventListener('loadeddata', reveal, { once: true });
-			media.addEventListener('error', reveal, { once: true });
-		}
+		// Two frames: the first lets the decoded image paint, the second fades it
+		// in, so the card cannot arrive first.
+		ready
+			.catch(() => {})
+			.then(() => requestAnimationFrame(() => requestAnimationFrame(reveal)));
 	}
 
 	revealWhenReady();
