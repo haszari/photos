@@ -5,6 +5,16 @@ const country = z
 	.string()
 	.regex(/^[A-Z]{2}$/, 'Use an uppercase ISO 3166-1 alpha-2 country code, e.g. NZ.');
 
+/** External pages for a record: artist profiles, gallery sites, listings. */
+const links = z
+	.array(
+		z.object({
+			label: z.string().optional(),
+			url: z.string().url(),
+		}),
+	)
+	.optional();
+
 const artists = defineCollection({
 	loader: glob({ base: './src/content/artists', pattern: '**/*.md' }),
 	schema: z.object({
@@ -13,6 +23,7 @@ const artists = defineCollection({
 		aliases: z.array(z.string()).optional(),
 		/** Photo id, e.g. `2026/20261118/20261118-IMG_4984` */
 		featuredPhoto: z.string().optional(),
+		links,
 	}),
 });
 
@@ -25,6 +36,7 @@ const locations = defineCollection({
 		city: z.string().optional(),
 		country: country.optional(),
 		featuredPhoto: z.string().optional(),
+		links,
 	}),
 });
 
@@ -34,6 +46,7 @@ const exhibitions = defineCollection({
 		title: z.string(),
 		startDate: z.coerce.date().optional(),
 		endDate: z.coerce.date().optional(),
+		links,
 	}),
 });
 
@@ -46,6 +59,7 @@ const works = defineCollection({
 			date: z.string().optional(),
 			artist: reference('artists').optional(),
 			artists: z.array(reference('artists')).optional(),
+			links,
 		})
 		.refine(({ artist, artists }) => !(artist && artists), {
 			message: 'Use either artist or artists, not both.',
@@ -59,6 +73,7 @@ const visits = defineCollection({
 		visitedAt: z.coerce.date().optional(),
 		title: z.string().optional(),
 		exhibitions: z.array(reference('exhibitions')).optional(),
+		links,
 	}),
 });
 

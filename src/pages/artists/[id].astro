@@ -3,6 +3,7 @@ import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import PageHeader from '../../components/PageHeader.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
+import EntityLinks from '../../components/EntityLinks.astro';
 import { getIndex } from '../../lib/content';
 import { photosForArtist } from '../../lib/queries';
 
@@ -29,11 +30,12 @@ const hasBody = Boolean(artist.body?.trim());
 	<main class="page stack">
 		<PageHeader title={artist.data.name} body={hasBody}>
 			{
-				facts.length > 0 && (
+				(facts.length > 0 || artist.data.links?.length) && (
 					<Fragment slot="facts">
 						{facts.map((fact) => (
 							<span>{fact}</span>
 						))}
+						<EntityLinks links={artist.data.links ?? []} />
 					</Fragment>
 				)
 			}

@@ -37,6 +37,13 @@ const pageTitle = workTitle ? `${workTitle} ${formatDate(photo.date)}` : formatD
 const alt = altText(photo);
 const description = data?.sourceCaption ?? alt;
 const placeDate = relations.visit?.data.visitedAt ?? photo.date;
+
+// A show named after the artist adds nothing next to the artist name in the
+// card, so skip it there. It still appears on the visit page.
+const artistNames = new Set(relations.artists.map((artist) => artist.data.name.trim().toLowerCase()));
+const cardExhibitions = relations.exhibitions.filter(
+	(exhibition) => !artistNames.has(exhibition.data.title.trim().toLowerCase()),
+);
 ---
 
 <Base title={pageTitle} description={description || undefined} path={photoHref(photo)}>
@@ -95,9 +102,9 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 					)
 				}
 				{
-					(relations.exhibitions.length > 0 || relations.location || placeDate) && (
+					(cardExhibitions.length > 0 || relations.location || placeDate) && (
 						<p class="photo-meta__line photo-meta__line--muted photo-meta__line--place">
-							{relations.exhibitions.map((exhibition, index) => (
+							{cardExhibitions.map((exhibition, index) => (
 								<>
 									{index > 0 && ' '}
 									<span class="photo-meta__exhibition">
@@ -107,7 +114,7 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 									</span>
 								</>
 							))}
-							{relations.exhibitions.length > 0 && (relations.location || placeDate) && ' '}
+							{cardExhibitions.length > 0 && (relations.location || placeDate) && ' '}
 							{relations.location && (
 								<span class="photo-meta__location">
 									<a href={route(`locations/${relations.location.id}/`)}>

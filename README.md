@@ -59,6 +59,52 @@ npm run scaffold:photos -- ./incoming/20261114
 - The scaffolder treats `mp4`/`webm` like any other asset: copied unchanged into the date directory, optional sidecar, same date derivation (ffprobe `creation_time`, then manifest, then prompt).
 - On the site the asset renders as `<video autoplay muted loop playsinline>` instead of an `<img>`, so it behaves as a live image in the masonry grid. This is the only autoplaying media on the site; there is no JS to pause it for `prefers-reduced-motion` — a known limitation if that matters later.
 
+### Adding a visit, exhibition or location by hand
+
+Records are plain Markdown; the filename is the id, so `cornelia-parker.md` becomes
+`/exhibitions/cornelia-parker/`.
+
+```md
+---
+# src/content/exhibitions/cornelia-parker.md
+title: Cornelia Parker
+startDate: 2026-10-04
+endDate: 2027-01-11
+links:
+  - url: https://citygallery.org.nz/exhibition/cornelia-parker/
+---
+
+Notes about the show. Markdown body is free text and renders under the facts line.
+```
+
+```md
+---
+# src/content/visits/2026/20261114-city-gallery-wellington.md
+location: city-gallery-wellington
+visitedAt: 2026-11-14
+exhibitions:
+  - cornelia-parker
+---
+```
+
+Then point photos at the visit with `visit: 2026/20261114-city-gallery-wellington`
+in their sidecar (the scaffolder does this from `photos.yml`).
+
+**Links.** Every record type — artist, location, exhibition, work, visit — accepts
+`links`, a list of `{ label?, url }`. A missing label falls back to the hostname
+(`citygallery.org.nz`), so one artist can list several profile pages:
+
+```yaml
+links:
+  - url: https://www.instagram.com/example/
+  - label: Tate profile
+    url: https://www.tate.org.uk/art/artists/example
+```
+
+**Special case.** An exhibition whose title matches one of the photo's artist
+names is hidden in the photo metadata card — it would just repeat the artist
+line. It still appears on the visit page and has its own page.
+
 ### Exporting from Apple Photos
 
 Export in Photos with **File → Export → Export Photos…**, not `Export Unmodified
