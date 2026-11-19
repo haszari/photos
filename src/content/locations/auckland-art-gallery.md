@@ -1,3 +1,3 @@
 ---
-name: Auckland Art Gallery
+name: Auckland Art Gallery Toi O Tāmaki
 ---
