@@ -85,6 +85,13 @@ body {
 	overflow-wrap: break-word;
 }
 
+/* Tags are lowercase by default (their labels in tags.yml can override), but a
+   page title reads as a sentence, so capitalise the first letter only. Works
+   through the title's link too, since it applies to the line, not the element. */
+.topbar__title h1::first-letter {
+	text-transform: uppercase;
+}
+
 /* Pages whose heading is only there for structure keep its line box, so the bar
    is the same height everywhere and the icons sit on one baseline instead of
    jumping up when there is no visible text. */
