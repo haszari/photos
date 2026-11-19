@@ -1,9 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
 import TypeIcon from '../../components/TypeIcon.astro';
+import TagCloud from '../../components/TagCloud.astro';
 import PageHeader from '../../components/PageHeader.astro';
 import { getTags } from '../../lib/tags';
-import { route } from '../../lib/url';
 
 const tags = await getTags();
 ---
@@ -13,16 +13,7 @@ const tags = await getTags();
 		<PageHeader title="Tags">
 			<TypeIcon slot="icon" type="tag" />
 		</PageHeader>
-		<ul class="tag-cloud">
-			{
-				tags.map((tag) => (
-					<li>
-						<a href={route(`tags/${tag.slug}/`)}>{tag.label}</a>
-						<span class="count"> {tag.count}</span>
-					</li>
-				))
-			}
-		</ul>
+		<TagCloud tags={tags} />
 		{tags.length === 0 && <p>No tags yet.</p>}
 	</main>
 </Base>
