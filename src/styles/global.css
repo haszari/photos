@@ -20,6 +20,9 @@
 	/* One heading size for every page top. */
 	--h1-size: clamp(1.5rem, 2.5vw, 2rem);
 	--nav-gap: 1.25rem;
+	/* The SVG box aligns to the baseline, but the stroked artwork sits a couple
+	   of pixels high inside it; this lands the icon ink on the visual baseline. */
+	--baseline-nudge: 2px;
 	/* The top bar: one page pad above the title line, half a pad below. Its
 	   height follows the heading's line box, which is taller than the icons. */
 	--topbar-height: calc(var(--page-pad) * 1.5 + var(--h1-size) * 1.15);
@@ -96,6 +99,12 @@ body {
 .home-link,
 .site-nav a {
 	display: inline-flex;
+}
+
+/* Icons in the bar: nudge the artwork onto the heading's visual baseline. */
+.topbar .home-link,
+.topbar .site-nav a {
+	transform: translateY(var(--baseline-nudge));
 }
 
 .page {
