@@ -2,8 +2,7 @@
  * Photo grid shape.
  *
  * Columns follow the viewport, then are capped by the number of photos so a
- * short grid never leaves an empty column and left-shifts its content. A pair
- * is always a row, even on a phone.
+ * short grid never leaves an empty column and left-shifts its content.
  */
 export interface GridShape {
 	/** Under 560px. */
@@ -20,7 +19,7 @@ const capped = (count: number, columns: number) => Math.max(1, Math.min(count, c
 
 export function gridColumns(count: number): GridShape {
 	return {
-		xs: count === 2 ? 2 : capped(count, 1),
+		xs: capped(count, 1),
 		sm: capped(count, 2),
 		md: capped(count, 3),
 		lg: capped(count, 4),
