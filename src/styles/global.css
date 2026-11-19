@@ -271,12 +271,11 @@ p {
 	padding-block-end: var(--page-pad);
 }
 
-/* Until the media has decoded there is nothing to look at, and the card would
-   arrive first. Hold both back, then fade them in together — quickly, so the
-   page does not feel like it is waiting on an animation. Where scripting is off
-   nothing is hidden, so the content is always reachable. */
-html.js .photo-page:not(.is-loaded) .photo-page__figure,
-html.js .photo-page:not(.is-loaded) .photo-meta {
+/* Transparent until the media has decoded, so the card cannot arrive before the
+   photograph it describes. The script adds .is-loaded once the image is ready
+   to paint. */
+.photo-page__figure,
+.photo-meta {
 	opacity: 0;
 }
 

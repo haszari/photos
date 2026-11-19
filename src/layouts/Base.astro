@@ -53,9 +53,6 @@ const siteJsonLd = {
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<Font cssVariable="--font-sans" preload />
-		{/* Marks a script-capable browser before first paint, so the photo page can
-		    hide its media until it has loaded without hiding it from anyone else. */}
-		<script is:inline>document.documentElement.classList.add('js');</script>
 		<ClientRouter />
 		<title>{pageTitle}</title>
 		{description && <meta name="description" content={description} />}
@@ -63,6 +60,23 @@ const siteJsonLd = {
 		<link rel="icon" href={url('favicon.ico')} sizes="32x32" />
 		<link rel="license" href={PHOTO_LICENSE.url} title={PHOTO_LICENSE.short} />
 		<link rel="canonical" href={canonical} />
+		{/* The photo page holds its media back until it can paint, and this has to
+		    be in the document: the stylesheet arrives later, and until then the
+		    card would render on its own. */}
+		<style is:inline>
+			.photo-page__figure,
+			.photo-meta {
+				opacity: 0;
+			}
+		</style>
+		<noscript>
+			<style>
+				.photo-page__figure,
+				.photo-meta {
+					opacity: 1;
+				}
+			</style>
+		</noscript>
 		<script type="application/ld+json" set:html={JSON.stringify(siteJsonLd)} />
 		<slot name="head" />
 		<meta name="generator" content={Astro.generator} />
