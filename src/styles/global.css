@@ -14,12 +14,15 @@
 	--page-pad: clamp(1rem, 2.5vw, 2.5rem);
 	/* Icons: one subtle grey, halfway from the floor to ink. */
 	--icon: color-mix(in srgb, var(--floor) 50%, var(--ink));
-	--icon-nav: 1.5rem;
+	/* Nav icons track the page title: a touch under its font size, so the icon
+	   reads as tall as the heading without overshooting its cap height. */
+	--icon-nav: calc(var(--h1-size) * 0.875);
 	/* One heading size for every page top. */
 	--h1-size: clamp(1.5rem, 2.5vw, 2rem);
 	--nav-gap: 1.25rem;
-	/* The top bar: one page pad above the icons, half a pad below. */
-	--topbar-height: calc(var(--page-pad) * 1.5 + var(--icon-nav));
+	/* The top bar: one page pad above the title line, half a pad below. Its
+	   height follows the heading's line box, which is taller than the icons. */
+	--topbar-height: calc(var(--page-pad) * 1.5 + var(--h1-size) * 1.15);
 	--font-sans: ui-sans-serif, system-ui, sans-serif;
 
 	color-scheme: light;
@@ -74,6 +77,17 @@ body {
 
 .topbar__title h1 {
 	font-size: var(--h1-size);
+}
+
+/* Pages whose heading is only there for structure keep its line box, so the bar
+   is the same height everywhere and the icons sit on one baseline instead of
+   jumping up when there is no visible text. */
+.topbar__heading--hidden {
+	opacity: 0;
+	width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	pointer-events: none;
 }
 
 .home-link,
