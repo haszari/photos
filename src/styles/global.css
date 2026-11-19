@@ -225,12 +225,6 @@ p {
 	}
 }
 
-@media (min-width: 1500px) {
-	.masonry {
-		columns: var(--masonry-columns-lg, 4);
-	}
-}
-
 /* Date / visit heading below a photo group, in the grid's inset. */
 .photo-group + .photo-group {
 	margin-top: clamp(1rem, 2.5vw, 1.75rem);
