@@ -289,7 +289,7 @@ function resolveWork(work, fallbackArtists = []) {
 	const title = String(work.title);
 	const slug = slugify(title);
 	const existing = works.find(
-		(entry) => entry.id === slug || entry.data.title?.toLowerCase() === title.toLowerCase(),
+		(entry) => entry.id === slug || entry.data.name?.toLowerCase() === title.toLowerCase(),
 	);
 	const artistNames = work.artists ?? fallbackArtists;
 	const artistIds = artistNames.map((name) => resolveArtist(name)?.id).filter(Boolean);
@@ -301,7 +301,7 @@ function resolveWork(work, fallbackArtists = []) {
 		return { id: existing.id, created: false };
 	}
 
-	const data = { title };
+	const data = { name: title };
 	if (artistIds.length > 0) data.artists = artistIds;
 	if (work.date) data.date = String(work.date);
 	works.push({ id: slug, data });
@@ -313,10 +313,10 @@ function resolveExhibition(title) {
 	if (!title) return undefined;
 	const slug = slugify(String(title));
 	const existing = exhibitions.find(
-		(entry) => entry.id === slug || entry.data.title?.toLowerCase() === String(title).toLowerCase(),
+		(entry) => entry.id === slug || entry.data.name?.toLowerCase() === String(title).toLowerCase(),
 	);
 	if (existing) return { id: existing.id, created: false };
-	exhibitions.push({ id: slug, data: { title: String(title) } });
+	exhibitions.push({ id: slug, data: { name: String(title) } });
 	plan.entities.push(`exhibitions/${slug}.md`);
 	return { id: slug, created: true };
 }
@@ -339,7 +339,7 @@ function resolveVisit({ datestamp, locationId, visitedAt, title, exhibitionTitle
 	const data = {};
 	if (locationId) data.location = locationId;
 	data.visitedAt = visitDate;
-	if (title) data.title = title;
+	if (title) data.name = title;
 
 	const exhibitionIds = (exhibitionTitles ?? [])
 		.map((exhibitionTitle) => resolveExhibition(exhibitionTitle)?.id)

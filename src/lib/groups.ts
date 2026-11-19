@@ -47,8 +47,8 @@ export async function groupPhotos(photos: Photo[]): Promise<PhotoGroup[]> {
 	return [...groups.values()].sort((a, b) => {
 		const timeDiff = b.date.getTime() - a.date.getTime();
 		if (timeDiff !== 0) return timeDiff;
-		const aName = a.location?.data.name ?? a.visit?.data.title ?? a.datestamp;
-		const bName = b.location?.data.name ?? b.visit?.data.title ?? b.datestamp;
+		const aName = a.location?.data.name ?? a.visit?.data.name ?? a.datestamp;
+		const bName = b.location?.data.name ?? b.visit?.data.name ?? b.datestamp;
 		return aName.localeCompare(bName);
 	});
 }

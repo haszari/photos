@@ -75,7 +75,7 @@ Records are plain Markdown; the filename is the id, so `cornelia-parker.md` beco
 ```md
 ---
 # src/content/exhibitions/cornelia-parker.md
-title: Cornelia Parker
+name: Cornelia Parker
 startDate: 2026-10-04
 endDate: 2027-01-11
 links:
@@ -97,6 +97,12 @@ exhibitions:
 
 Then point photos at the visit with `visit: 2026/20261114-city-gallery-wellington`
 in their sidecar (the scaffolder does this from `photos.yml`).
+
+**Names.** Every record with a page of its own — artist, location, work,
+exhibition, visit — takes its display name from `name`, and only from `name`.
+Those collections are built with `entitySchema()` from `src/lib/schema.ts`, which
+adds the required field, so a new record type cannot invent `title` and quietly
+lose its heading. `visits` may omit `name` and fall back to the location's.
 
 **Links.** Every record type — artist, location, exhibition, work, visit — accepts
 `links`, a list of `{ label?, url }`. A missing label falls back to the hostname

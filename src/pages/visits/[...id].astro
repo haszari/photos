@@ -29,7 +29,7 @@ const exhibitions = (visit.data.exhibitions ?? [])
 
 const date = visit.data.visitedAt;
 const title =
-	visit.data.title ?? location?.data.name ?? (date ? formatDate(date, 'long') : visit.id);
+	visit.data.name ?? location?.data.name ?? (date ? formatDate(date, 'long') : visit.id);
 const hasBody = Boolean(visit.body?.trim());
 const links = visit.data.links ?? [];
 const primary = links[0];
@@ -47,7 +47,7 @@ const primary = links[0];
 		<PageFacts body={hasBody}>
 			{
 				(date ||
-					(location && visit.data.title) ||
+					(location && visit.data.name) ||
 					exhibitions.length > 0 ||
 					links.length > 1) && (
 					<Fragment slot="facts">
@@ -58,12 +58,12 @@ const primary = links[0];
 						)}
 						{exhibitions.map((exhibition) => (
 							<span>
-								<a href={route(`exhibitions/${exhibition.id}/`)}>{exhibition.data.title}</a>
+								<a href={route(`exhibitions/${exhibition.id}/`)}>{exhibition.data.name}</a>
 								<TypeIcon type="exhibition" class="icon-inline" />
 							</span>
 						))}
 						{links.length > 1 && <EntityLinks links={links} />}
-						{location && visit.data.title && (
+						{location && visit.data.name && (
 							<span>
 								<a href={route(`locations/${location.id}/`)}>{location.data.name}</a>
 								<TypeIcon type="location" class="icon-inline" />

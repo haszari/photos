@@ -1,5 +1,5 @@
 ---
-title: Cornelia Parker
+name: Cornelia Parker
 links:
   - url: https://citygallery.org.nz/exhibition/cornelia-parker/
 ---

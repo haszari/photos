@@ -31,7 +31,7 @@ const tagSlugs = photoTags(data?.tags, registry);
 const tagMap = new Map(allTags.map((tag) => [tag.slug, tag]));
 const tags = tagSlugs.map((slug) => tagMap.get(slug)).filter(Boolean);
 
-const workTitle = relations.works[0]?.data.title;
+const workTitle = relations.works[0]?.data.name;
 const heading = workTitle ?? formatDate(photo.date, 'long');
 const pageTitle = workTitle ? `${workTitle} ${formatDate(photo.date)}` : formatDate(photo.date, 'long');
 const alt = altText(photo);
@@ -42,7 +42,7 @@ const placeDate = relations.visit?.data.visitedAt ?? photo.date;
 // card, so skip it there. It still appears on the visit page.
 const artistNames = new Set(relations.artists.map((artist) => artist.data.name.trim().toLowerCase()));
 const cardExhibitions = relations.exhibitions.filter(
-	(exhibition) => !artistNames.has(exhibition.data.title.trim().toLowerCase()),
+	(exhibition) => !artistNames.has(exhibition.data.name.trim().toLowerCase()),
 );
 ---
 
@@ -91,7 +91,7 @@ const cardExhibitions = relations.exhibitions.filter(
 							{relations.works.map((work, index) => (
 								<>
 									{index > 0 && ' '}
-									<a href={route(`works/${work.id}/`)}>{work.data.title}</a>
+									<a href={route(`works/${work.id}/`)}>{work.data.name}</a>
 									{work.data.date && (
 										<span class="photo-meta__year">{` ${work.data.date}`}</span>
 									)}
@@ -108,7 +108,7 @@ const cardExhibitions = relations.exhibitions.filter(
 									{index > 0 && ' '}
 									<span class="photo-meta__exhibition">
 										<a href={route(`exhibitions/${exhibition.id}/`)}>
-											{exhibition.data.title}
+											{exhibition.data.name}
 										</a>
 									</span>
 								</>

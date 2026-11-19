@@ -37,8 +37,8 @@ const groups = await groupPhotos(photos);
 								<TypeIcon type="location" class="icon-inline" />
 							</span>
 						)}
-						{!group.location && group.visit?.data.title && (
-							<span>{group.visit.data.title}</span>
+						{!group.location && group.visit?.data.name && (
+							<span>{group.visit.data.name}</span>
 						)}
 					</Fragment>
 				</PhotoGroup>

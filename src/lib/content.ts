@@ -41,8 +41,8 @@ async function loadIndex(): Promise<ContentIndex> {
 	return {
 		artists: [...artists].sort((a, b) => a.data.name.localeCompare(b.data.name)),
 		locations: [...locations].sort((a, b) => a.data.name.localeCompare(b.data.name)),
-		exhibitions: [...exhibitions].sort((a, b) => a.data.title.localeCompare(b.data.title)),
-		works: [...works].sort((a, b) => a.data.title.localeCompare(b.data.title)),
+		exhibitions: [...exhibitions].sort((a, b) => a.data.name.localeCompare(b.data.name)),
+		works: [...works].sort((a, b) => a.data.name.localeCompare(b.data.name)),
 		visits: [...visits],
 		artistById: byId(artists),
 		locationById: byId(locations),
