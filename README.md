@@ -108,6 +108,8 @@ Input: `.mov` from a phone (or any video).
 
 Output: `.mp4` beside the source, a silent web loop, ready to import.
 
+#### Usage
+
 ```sh
 npm run convert:videos -- ~/Desktop/raw-export/IMG_4821.mov --mode loop --max-duration 8
 npm run convert:videos -- ~/Desktop/raw-export
@@ -116,11 +118,14 @@ npm run convert:videos -- ~/Desktop/raw-export
 - Single file: converts that one file (the example adds `--mode loop` and an
   8-second trim).
 - Folder: walks the folder and every subfolder, converting each video in place.
-- Default is a boomerang (forward + reversed, seamless loop); `--mode loop` for
-  a straight clip.
+
+#### Behaviour
+
+- Default is a boomerang (forward + reversed, seamless loop).
+- `--mode loop` for a straight clip.
 - Already-converted files are skipped unless `--force`.
 
-Dependencies:
+#### Dependencies
 
 - `ffmpeg` and `ffprobe` on the PATH. macOS: `brew install ffmpeg`.
 
