@@ -12,8 +12,9 @@
     "preview": "astro preview",
     "astro": "astro",
     "check": "node scripts/check-photo-access.mjs",
-    "scaffold:photos": "node scripts/scaffold-photos.mjs",
-    "convert:videos": "node scripts/convert-videos.mjs"
+    "convert:videos": "node scripts/convert-videos.mjs",
+    "import:photos": "node scripts/scaffold-photos.mjs",
+    "sort:photos": "node scripts/sort-photos.mjs"
   },
   "dependencies": {
     "@lucide/astro": "^1.75.0",

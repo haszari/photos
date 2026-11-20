@@ -1,97 +1,86 @@
 #!/usr/bin/env node
 /**
- * Import photos into `src/content/photos/<year>/<yyyymmdd>/`.
+ * Import one folder per visit into `src/content/`.
  *
- *   npm run scaffold:photos -- ./incoming/20261118 --date 20261118
+ *   npm run import:photos [top-folder] [--preview] [--apply] [--skip-save] [--report <file>]
  *
- * Options:
- *   --date <yyyymmdd>     Force the directory/filename date (default: each
- *                         photo's EXIF capture date)
- *   --location <name>     Default location for the run (--gallery is an alias)
- *   --visit-date <date>   Default visit date (YYYY-MM-DD)
- *   --tags <a,b>          Default tags for the run
- *   --manifest <file>     Metadata file (defaults to <source>/photos.yml)
- *   --no-save             Do not write prompted answers back to the manifest
- *   --update              Overwrite sidecar fields from the manifest/EXIF
- *                         (default: only add fields that are missing)
- *   --yes                 Accept the plan without confirming
- *   --dry-run             Print the plan and exit
+ * The top folder (default `incoming/`) holds one subfolder per visit — one
+ * location, one date, any number of shows. Each visit folder has its own
+ * `photos.yml`:
  *
- * Images are copied unchanged. Prompts ask for the directory date, location,
- * visit date and tags unless flags or `photos.yml` already answer them (skip
- * prompts with --yes). Prompted answers are saved back into `photos.yml`, so a
- * run can be aborted, the manifest edited by hand, then re-run: imported
- * images are recognised by content hash, and existing sidecars only gain keys
- * they are missing.
+ *   location: Auckland Art Gallery        # name or id, required
+ *   name:                                 # optional, blank = location's name
+ *   date: 2025-06-29                      # optional; folder override, else EXIF
+ *   exhibitions:                          # a gallery can hold several shows
+ *     - Fiona Pardington                  # a name…
+ *     - name: Ancient Worlds              # …or { name, tags } for a common tag
+ *       tags: [archaeology]
+ *   tags: [painting]                      # fanned into every photo in the visit
+ *   photos:
+ *     IMG_7302.jpeg:
+ *       exhibition: Fiona Pardington      # only when the visit has >1 show
+ *       artists: [Fiona Pardington]
+ *       works: [A Beautiful Hesitation]
+ *       tags: [photography]
+ *       alt: ...
+ *       note: ...
  *
- * A metadata sidecar is written only when there is information worth keeping —
- * artist, work, tags, caption, alt text, visit, exhibition, or a note. A
- * capture time or source filename alone is not enough. Nothing is ever
- * overwritten.
+ * The manifest is the source of truth: a key you set there overwrites the
+ * photo's metadata on re-run; a key you leave unset only fills gaps from EXIF,
+ * captions and file keywords. Visit tags and exhibition tags fan out into each
+ * photo's `tags` at import — the Astro model stays flat, tags live on photos.
+ *
+ * Prompts ask only for what the manifest is missing (location, exhibitions),
+ * then write the manifest back, so you can abort, edit by hand, and re-run.
+ * `--apply` runs from the manifest alone with no prompts or confirm.
+ * `--preview` prints the plan and writes nothing. `--skip-save` does not write
+ * the manifest back.
  */
 import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 import { createInterface } from 'node:readline/promises';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import exifr from 'exifr';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import {
+	SUPPORTED,
+	MEDIA_EXTENSIONS,
+	captionSegments,
+	datestampFromDate,
+	hashFile,
+	isoDate,
+	matchRecord,
+	normalizeTag,
+	parseDatestamp,
+	readFrontmatter,
+	scanMedia,
+	slugify,
+	walkMarkdown,
+} from './lib/photos.mjs';
 
-const execFileAsync = promisify(execFile);
 const ROOT = process.cwd();
 const CONTENT = path.join(ROOT, 'src', 'content');
-const SUPPORTED = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.mp4', '.webm']);
-const VIDEO = new Set(['.mp4', '.webm']);
-const MEDIA_EXTENSIONS = new Set([
-	'.heic',
-	'.heif',
-	'.tif',
-	'.tiff',
-	'.gif',
-	'.mov',
-	'.m4v',
-	'.avi',
-	'.mkv',
-]);
 
 const argv = process.argv.slice(2);
 const options = {
-	source: undefined,
-	date: undefined,
-	location: undefined,
-	visitDate: undefined,
-	tags: [],
-	manifest: undefined,
-	yes: false,
-	dryRun: false,
+	top: 'incoming',
+	preview: false,
+	apply: false,
 	save: true,
-	update: false,
+	report: undefined,
 };
 
 for (let index = 0; index < argv.length; index += 1) {
 	const arg = argv[index];
 	const next = () => argv[(index += 1)];
-	if (arg === '--date') options.date = next();
-	else if (arg === '--location' || arg === '--gallery') options.location = next();
-	else if (arg === '--visit-date') options.visitDate = next();
-	else if (arg === '--tags') options.tags = splitList(next());
-	else if (arg === '--manifest') options.manifest = next();
-	else if (arg === '--no-save') options.save = false;
-	else if (arg === '--update') options.update = true;
-	else if (arg === '--yes' || arg === '-y') options.yes = true;
-	else if (arg === '--dry-run') options.dryRun = true;
+	if (arg === '--preview') options.preview = true;
+	else if (arg === '--apply') options.apply = true;
+	else if (arg === '--skip-save') options.save = false;
+	else if (arg === '--report') options.report = next();
 	else if (arg === '--help' || arg === '-h') {
 		console.log(await readFile(new URL(import.meta.url), 'utf8').then(helpText));
 		process.exit(0);
-	} else if (!arg.startsWith('--') && !options.source) options.source = arg;
+	} else if (!arg.startsWith('--') && options.top === 'incoming') options.top = arg;
 	else throw new Error(`Unknown argument: ${arg}`);
-}
-
-if (!options.source) {
-	console.error('Usage: npm run scaffold:photos -- <source-dir> [--date yyyymmdd] [--yes] [--dry-run]');
-	process.exit(1);
 }
 
 function helpText(contents) {
@@ -129,66 +118,6 @@ function splitList(value) {
 		.filter(Boolean);
 }
 
-function slugify(value) {
-	return value
-		.normalize('NFC')
-		.toLowerCase()
-		.replace(/[^\p{L}\p{N}]+/gu, '-')
-		.replace(/^-+|-+$/g, '');
-}
-
-function normalizeTag(value) {
-	return slugify(value);
-}
-
-function datestampFromDate(date) {
-	const year = date.getUTCFullYear();
-	const month = `${date.getUTCMonth() + 1}`.padStart(2, '0');
-	const day = `${date.getUTCDate()}`.padStart(2, '0');
-	return `${year}${month}${day}`;
-}
-
-function isoDate(date) {
-	return date.toISOString().slice(0, 10);
-}
-
-function parseDatestamp(value) {
-	if (!/^\d{8}$/.test(value ?? '')) return undefined;
-	const year = Number(value.slice(0, 4));
-	const month = Number(value.slice(4, 6));
-	const day = Number(value.slice(6, 8));
-	const date = new Date(Date.UTC(year, month - 1, day));
-	return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
-async function readFrontmatter(file) {
-	const contents = await readFile(file, 'utf8');
-	const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(contents);
-	if (!match) return { data: {}, body: contents };
-	return { data: parseYaml(match[1]) ?? {}, body: match[2] ?? '' };
-}
-
-async function walkMarkdown(directory) {
-	const results = [];
-	let entries;
-	try {
-		entries = await readdir(directory, { withFileTypes: true, recursive: true });
-	} catch {
-		return results;
-	}
-	for (const entry of entries) {
-		if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
-		const full = path.join(entry.parentPath ?? directory, entry.name);
-		const id = path
-			.relative(directory, full)
-			.replace(/\.md$/, '')
-			.split(path.sep)
-			.join('/');
-		results.push({ id, file: full, ...(await readFrontmatter(full)) });
-	}
-	return results;
-}
-
 const plan = {
 	images: [],
 	sidecars: [],
@@ -197,10 +126,6 @@ const plan = {
 	skipped: [],
 	warnings: [],
 };
-
-async function hashFile(file) {
-	return createHash('sha256').update(await readFile(file)).digest('hex');
-}
 
 const [locations, artists, works, exhibitions, visits] = await Promise.all([
 	walkMarkdown(path.join(CONTENT, 'locations')),
@@ -215,240 +140,13 @@ try {
 	const tagFile = await readFile(path.join(CONTENT, 'tag-metadata', 'tags.yml'), 'utf8');
 	for (const [slug, metadata] of Object.entries(parseYaml(tagFile)?.tags ?? {})) {
 		const canonical = normalizeTag(slug);
-		for (const alias of metadata?.aliases ?? []) {
-			tagAliases.set(normalizeTag(alias), canonical);
-		}
+		for (const alias of metadata?.aliases ?? []) tagAliases.set(normalizeTag(alias), canonical);
 	}
 } catch {
 	// Optional file.
 }
 
-function resolveLocation(name) {
-	if (!name) return undefined;
-	const slug = slugify(name);
-	const existing = locations.find(
-		(entry) => entry.id === slug || entry.data.name?.toLowerCase() === name.toLowerCase(),
-	);
-	if (existing) return { id: existing.id, created: false };
-	const id = slug;
-	locations.push({ id, data: { name } });
-	plan.entities.push(`locations/${id}.md`);
-	return { id, created: true };
-}
-
-function matchArtist(name) {
-	if (!name) return undefined;
-	const slug = slugify(name);
-	return artists.find(
-		(artist) =>
-			artist.id === slug ||
-			artist.data.name?.toLowerCase() === name.toLowerCase() ||
-			(artist.data.aliases ?? []).some((alias) => alias.toLowerCase() === name.toLowerCase()),
-	);
-}
-
-function resolveArtist(name) {
-	if (!name) return undefined;
-	const existing = matchArtist(name);
-	if (existing) return { id: existing.id, created: false };
-	const slug = slugify(name);
-	artists.push({ id: slug, data: { name } });
-	plan.entities.push(`artists/${slug}.md`);
-	return { id: slug, created: true };
-}
-
-/** Videos have no EXIF; ffprobe often has a creation_time. */
-async function videoTakenAt(file) {
-	try {
-		const { stdout } = await execFileAsync('ffprobe', [
-			'-v',
-			'error',
-			'-show_entries',
-			'format_tags=creation_time',
-			'-of',
-			'json',
-			file,
-		]);
-		const created = JSON.parse(stdout)?.format?.tags?.creation_time;
-		return created ? new Date(created) : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
-/** Caption segments, e.g. `Nigel Wilson | Mary Jane Sneyd` -> two names. */
-function captionSegments(captionText) {
-	return (captionText ?? '')
-		.split('|')
-		.map((part) => part.trim())
-		.filter(Boolean);
-}
-
-function resolveWork(work, fallbackArtists = []) {
-	if (!work?.title) return undefined;
-	const title = String(work.title);
-	const slug = slugify(title);
-	const existing = works.find(
-		(entry) => entry.id === slug || entry.data.name?.toLowerCase() === title.toLowerCase(),
-	);
-	const artistNames = work.artists ?? fallbackArtists;
-	const artistIds = artistNames.map((name) => resolveArtist(name)?.id).filter(Boolean);
-
-	if (existing) {
-		if (artistIds.length > 0 && !existing.data.artists && !existing.data.artist) {
-			existing.data.artists = artistIds.map((id) => id);
-		}
-		return { id: existing.id, created: false };
-	}
-
-	const data = { name: title };
-	if (artistIds.length > 0) data.artists = artistIds;
-	if (work.date) data.date = String(work.date);
-	works.push({ id: slug, data });
-	plan.entities.push(`works/${slug}.md`);
-	return { id: slug, created: true };
-}
-
-function resolveExhibition(title) {
-	if (!title) return undefined;
-	const slug = slugify(String(title));
-	const existing = exhibitions.find(
-		(entry) => entry.id === slug || entry.data.name?.toLowerCase() === String(title).toLowerCase(),
-	);
-	if (existing) return { id: existing.id, created: false };
-	exhibitions.push({ id: slug, data: { name: String(title) } });
-	plan.entities.push(`exhibitions/${slug}.md`);
-	return { id: slug, created: true };
-}
-
-function resolveVisit({ datestamp, locationId, visitedAt, title, exhibitionTitles }) {
-	const visitDate = visitedAt ?? datestamp;
-	const existing = visits.find((visit) => {
-		const sameLocation = (visit.data.location ?? '') === (locationId ?? '');
-		const sameDate = visit.data.visitedAt
-			? isoDate(new Date(visit.data.visitedAt)) === visitDate
-			: visit.id.startsWith(visitedAt ? visitedAt.replaceAll('-', '') : '');
-		return sameLocation && sameDate;
-	});
-	if (existing) return { id: existing.id, created: false };
-
-	const year = visitDate.slice(0, 4);
-	const prefix = visitDate.replaceAll('-', '');
-	const locationPart = locationId ?? slugify(title ?? 'visit');
-	const id = `${year}/${prefix}-${locationPart}`;
-	const data = {};
-	if (locationId) data.location = locationId;
-	data.visitedAt = visitDate;
-	if (title) data.name = title;
-
-	const exhibitionIds = (exhibitionTitles ?? [])
-		.map((exhibitionTitle) => resolveExhibition(exhibitionTitle)?.id)
-		.filter(Boolean);
-	if (exhibitionIds.length > 0) data.exhibitions = exhibitionIds;
-
-	visits.push({ id, data });
-	plan.entities.push(`visits/${id}.md`);
-	return { id, created: true };
-}
-
-function resolveTags(values) {
-	const seen = new Set();
-	for (const value of values ?? []) {
-		const slug = normalizeTag(value);
-		if (slug) seen.add(tagAliases.get(slug) ?? slug);
-	}
-	return [...seen];
-}
-
-// --- Read source folder ----------------------------------------------------
-
-const sourceDir = path.resolve(ROOT, options.source);
-const sourceEntries = await readdir(sourceDir, { withFileTypes: true });
-const files = sourceEntries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
-const images = files.filter((name) => SUPPORTED.has(path.extname(name).toLowerCase()));
-const unsupported = files.filter((name) => {
-	const extension = path.extname(name).toLowerCase();
-	return MEDIA_EXTENSIONS.has(extension) && !SUPPORTED.has(extension);
-});
-
-for (const name of unsupported) {
-	plan.warnings.push(`unsupported file, not imported: ${name}`);
-}
-if (unsupported.length === 0 && files.length === 0) {
-	plan.warnings.push(`${sourceDir} contains no files.`);
-}
-
-// --- Manifest --------------------------------------------------------------
-
-const manifestPath = options.manifest
-	? path.resolve(ROOT, options.manifest)
-	: path.join(sourceDir, 'photos.yml');
-let manifest = {};
-try {
-	manifest = parseYaml(await readFile(manifestPath, 'utf8')) ?? {};
-} catch (error) {
-	if (options.manifest) throw error;
-}
-
-const manifestVisit = manifest.visit ?? {};
-const manifestDefaults = manifest.defaults ?? {};
-const manifestPhotos = manifest.photos ?? {};
-
-// --- Peek at the images ---------------------------------------------------
-
-// Read EXIF/XMP once per image. Capture dates come from the photos themselves;
-// `--date` is an override, not a requirement.
-const scanned = new Map();
-for (const name of images) {
-	const sourcePath = path.join(sourceDir, name);
-	const info = { takenAt: undefined, captionText: undefined, keywordTags: [] };
-	if (VIDEO.has(path.extname(name).toLowerCase())) {
-		info.takenAt = await videoTakenAt(sourcePath);
-		scanned.set(name, info);
-		continue;
-	}
-	try {
-		const exif = await exifr.parse(sourcePath, {
-			xmp: true,
-			iptc: true,
-			exif: true,
-			tiff: true,
-		});
-		info.takenAt = exif?.DateTimeOriginal ?? exif?.CreateDate;
-		const caption = exif?.ImageDescription ?? exif?.Description ?? exif?.Caption;
-		if (typeof caption === 'string') {
-			info.captionText = caption.replace(/[|\s]+$/u, '').trim() || undefined;
-		}
-		const subject = exif?.Subject ?? exif?.subject ?? exif?.Keywords;
-		if (Array.isArray(subject)) info.keywordTags = subject.map(String);
-		else if (typeof subject === 'string') info.keywordTags = [subject];
-	} catch {
-		// No readable EXIF/XMP.
-	}
-	scanned.set(name, info);
-}
-
-let runVisitDate = options.visitDate ?? manifestVisit.visitedAt;
-
-/** `--date` override, per-photo `takenAt`, EXIF, then the visit date. */
-function dateFor(name) {
-	if (options.date) return options.date;
-	const metadata = manifestPhotos[name] ?? {};
-	const takenAt = metadata.takenAt ?? scanned.get(name)?.takenAt;
-	if (takenAt) return datestampFromDate(new Date(takenAt));
-	if (runVisitDate) return String(runVisitDate).replaceAll('-', '');
-	return undefined;
-}
-
-const locationName = options.location ?? manifestVisit.location ?? manifestVisit.gallery;
-let runLocationName = locationName;
-let runLocation = resolveLocation(locationName);
-const runTags = [...options.tags, ...(manifestDefaults.tags ?? [])];
-
-// --- Prompts --------------------------------------------------------------
-
 const prompt = createInterface({ input: process.stdin, output: process.stdout });
-
 async function ask(question) {
 	try {
 		return await prompt.question(question);
@@ -459,390 +157,419 @@ async function ask(question) {
 	}
 }
 
-const interactive = !options.yes && Boolean(process.stdin.isTTY);
+const interactive = !options.apply && Boolean(process.stdin.isTTY);
+const KIND_PATH = { locations: 'locations', artists: 'artists', works: 'works', exhibitions: 'exhibitions' };
 
-const undated = images.filter((name) => !dateFor(name));
-let fallbackDatestamp;
-
-if (undated.length > 0) {
-	if (!interactive) {
-		throw new Error(
-			`No capture date for: ${undated.join(', ')}. Pass --date yyyymmdd, or set takenAt in photos.yml.`,
-		);
+/** Resolve a typed name against a collection, creating it when nothing matches. */
+async function resolveNamed(kind, records, name) {
+	if (!name) return undefined;
+	const result = matchRecord(records, name);
+	if (result.exact) return { id: result.exact.id, created: false };
+	if (result.close) {
+		if (result.close.length === 1) {
+			console.log(`  ${name} → ${result.close[0].id}`);
+			return { id: result.close[0].id, created: false };
+		}
+		if (interactive) {
+			console.log(`  Ambiguous "${name}":`);
+			result.close.forEach((record, index) =>
+				console.log(`    ${index + 1}. ${record.data?.name ?? record.id}`),
+			);
+			const answer = await ask('  Pick a number, type a name, or [c]reate new: ');
+			const trimmed = answer.trim();
+			const number = Number.parseInt(trimmed, 10);
+			if (Number.isInteger(number) && result.close[number - 1]) {
+				return { id: result.close[number - 1].id, created: false };
+			}
+			if (/^c/i.test(trimmed)) return createNamed(kind, records, name);
+			if (trimmed) return resolveNamed(kind, records, trimmed);
+			return createNamed(kind, records, name);
+		}
+		console.log(`  ${name}: several close matches; creating a new ${kind.slice(0, -1)}.`);
 	}
-	const answer = await ask(
-		`No capture date for ${undated.length} photo(s). Date to use (YYYYMMDD): `,
+	return createNamed(kind, records, name);
+}
+
+function createNamed(kind, records, name) {
+	const id = slugify(name);
+	const existing = records.find((record) => record.id === id);
+	if (existing) return { id: existing.id, created: false };
+	records.push({ id, data: { name } });
+	plan.entities.push(`${KIND_PATH[kind]}/${id}.md`);
+	return { id, created: true };
+}
+
+/** A folder is a visit if it holds media; the top folder may itself be one. */
+async function discoverVisitFolders(top) {
+	const entries = await readdir(top, { withFileTypes: true });
+	const hasMedia = entries.some(
+		(entry) => entry.isFile() && SUPPORTED.has(path.extname(entry.name).toLowerCase()),
 	);
-	fallbackDatestamp = answer.trim();
-	if (!parseDatestamp(fallbackDatestamp)) {
-		throw new Error(`Invalid date "${fallbackDatestamp}". Expected YYYYMMDD.`);
-	}
+	if (hasMedia) return [top];
+	return entries
+		.filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
+		.map((entry) => path.join(top, entry.name));
 }
 
-function datestampFor(name) {
-	const value = dateFor(name) ?? fallbackDatestamp;
-	if (!parseDatestamp(value)) {
-		throw new Error(`Invalid date "${value}" for ${name}. Expected YYYYMMDD.`);
+async function importFolder(folder) {
+	const images = (await readdir(folder, { withFileTypes: true }))
+		.filter((entry) => entry.isFile() && SUPPORTED.has(path.extname(entry.name).toLowerCase()))
+		.map((entry) => entry.name)
+		.sort();
+	if (images.length === 0) return;
+
+	const manifestPath = path.join(folder, 'photos.yml');
+	let manifest = {};
+	try {
+		manifest = parseYaml(await readFile(manifestPath, 'utf8')) ?? {};
+	} catch {
+		// Prompted below and written back.
 	}
-	return value;
-}
+	const manifestPhotos = manifest.photos ?? {};
 
-let importKeywords = manifestDefaults.keywords !== false;
+	console.log(`\n── ${path.relative(ROOT, folder)}`);
 
-if (interactive) {
-	if (!runLocation) {
-		const answer = await ask('Location (blank for none): ');
-		if (answer.trim()) {
-			runLocationName = answer.trim();
-			runLocation = resolveLocation(runLocationName);
+	// --- Location (required) -------------------------------------------------
+	let locationName = typeof manifest.location === 'string' ? manifest.location : undefined;
+	if (!locationName && interactive) {
+		const answer = await ask('Location: ');
+		locationName = answer.trim() || undefined;
+	}
+	if (!locationName) {
+		plan.warnings.push(`${path.relative(ROOT, folder)}: no location; imported without a visit.`);
+	}
+
+	// --- Exhibitions (optional) ------------------------------------------------
+	// Entries are names, or `{ name, tags }` so a show can carry a common tag
+	// that fans into every photo of it. Prompted answers are plain names.
+	const rawExhibitions = Array.isArray(manifest.exhibitions) ? manifest.exhibitions : [];
+	let exhibitionEntries = rawExhibitions.map((entry) =>
+		typeof entry === 'string'
+			? { name: entry, tags: [] }
+			: {
+					name: String(entry?.name ?? entry?.id ?? ''),
+					tags: Array.isArray(entry?.tags) ? entry.tags : [],
+				},
+	);
+	if (interactive && exhibitionEntries.length === 0) {
+		const answer = await ask('Exhibitions, comma-separated (blank for none): ');
+		exhibitionEntries = splitList(answer).map((name) => ({ name, tags: [] }));
+	}
+
+	// --- Visit-wide tags (fanned into every photo) ----------------------------
+	let folderTags = Array.isArray(manifest.tags) ? manifest.tags : [];
+	if (interactive && !Array.isArray(manifest.tags)) {
+		const answer = await ask('Tags, comma-separated (blank for none): ');
+		folderTags = splitList(answer);
+	}
+
+	// --- Save the completed manifest -----------------------------------------
+	const nextManifest = compact({
+		location: locationName ?? manifest.location,
+		name: manifest.name,
+		date: manifest.date,
+		exhibitions:
+			exhibitionEntries.length > 0
+				? exhibitionEntries.map((entry) =>
+						entry.tags.length > 0 ? { name: entry.name, tags: entry.tags } : entry.name,
+					)
+				: undefined,
+		tags: folderTags.length > 0 ? folderTags : undefined,
+		photos: manifestPhotos,
+	});
+	if (options.save && Object.keys(nextManifest).length > 0) {
+		const yaml = stringifyYaml(nextManifest);
+		if (options.preview) {
+			console.log(`\nWould save ${path.relative(ROOT, manifestPath)}:`);
+			for (const line of yaml.trimEnd().split('\n')) console.log(`  ${line}`);
+		} else {
+			await mkdir(folder, { recursive: true });
+			await writeFile(manifestPath, `---\n${yaml.trimEnd()}\n---\n`);
 		}
 	}
-	if (!runVisitDate) {
-		const suggested = images.length > 0 ? isoFromDatestamp(datestampFor(images[0])) : undefined;
-		const answer = await ask(
-			`Visit date${suggested ? ` [${suggested}]` : ''}: `,
-		);
-		// Blank keeps per-photo dates; only an explicit answer sets one run date.
-		if (answer.trim()) runVisitDate = answer.trim();
-	}
-	if (runTags.length === 0) {
-		const answer = await ask('Tags, comma-separated (blank for none): ');
-		runTags.push(...splitList(answer));
-	}
-	if (manifestDefaults.keywords === undefined) {
-		const answer = await ask('Import Photos keywords as tags? [Y/n] ');
-		importKeywords = !/^n/i.test(answer.trim());
+
+	// --- Resolve records ------------------------------------------------------
+	const location = locationName ? await resolveNamed('locations', locations, locationName) : undefined;
+	const resolvedExhibitions = [];
+	const exhibitionTags = new Map();
+	for (const entry of exhibitionEntries) {
+		const resolved = await resolveNamed('exhibitions', exhibitions, entry.name);
+		if (resolved) {
+			resolvedExhibitions.push(resolved);
+			if (entry.tags.length > 0) exhibitionTags.set(resolved.id, entry.tags);
+		}
 	}
 
-	// Apple captions often read `Artist | Artist`. Offer to create records for
-	// caption names that do not match an existing artist, without assuming every
-	// caption segment is a person.
-	const unmatchedCaptionNames = [
-		...new Set(
-			[...scanned.values()]
-				.flatMap((info) => captionSegments(info.captionText))
-				.filter((name) => !matchArtist(name)),
-		),
-	];
+	// --- Date ---------------------------------------------------------------
+	const folderDate = manifest.date ? String(manifest.date).replaceAll('-', '') : undefined;
 
-	if (unmatchedCaptionNames.length > 0) {
+	const scanned = new Map();
+	for (const name of images) scanned.set(name, await scanMedia(path.join(folder, name)));
+
+	const datestampFor = (name) => {
+		const exif = scanned.get(name)?.takenAt;
+		const value = folderDate ?? (exif ? datestampFromDate(new Date(exif)) : undefined);
+		if (!value) return undefined;
+		if (!parseDatestamp(value)) {
+			throw new Error(`Invalid date "${value}" for ${name}. Expected YYYYMMDD or YYYY-MM-DD.`);
+		}
+		return value;
+	};
+
+	const visitDate = folderDate ?? (images.length > 0 ? datestampFor(images[0]) : undefined);
+	const year = visitDate ? visitDate.slice(0, 4) : undefined;
+	const visitId = location && visitDate
+		? `${year}/${visitDate}-${location.id}`
+		: undefined;
+
+	let visit = undefined;
+	if (location && visitId) {
+		visit = visits.find((entry) => entry.id === visitId);
+		if (!visit) {
+			const data = {
+				location: location.id,
+				visitedAt: isoDate(new Date(
+					Date.UTC(
+						Number(visitDate.slice(0, 4)),
+						Number(visitDate.slice(4, 6)) - 1,
+						Number(visitDate.slice(6, 8)),
+					),
+				)),
+			};
+			if (manifest.name) data.name = manifest.name;
+			if (resolvedExhibitions.length > 0) {
+				data.exhibitions = resolvedExhibitions.map((exhibition) => exhibition.id);
+			}
+			visit = { id: visitId, data };
+			visits.push(visit);
+			plan.entities.push(`visits/${visitId}.md`);
+		}
+	}
+
+	// --- Caption artists (prompt once per folder, before the photo loop) ---
+	const unmatchedCaptions = [];
+	for (const name of images) {
+		const manifestPhoto = manifestPhotos[name] ?? {};
+		if (manifestPhoto.artists?.length) continue;
+		for (const captionName of captionSegments(scanned.get(name)?.captionText)) {
+			const match = matchRecord(artists, captionName);
+			if (!match.exact && !match.close?.length) unmatchedCaptions.push(captionName);
+		}
+	}
+	if (unmatchedCaptions.length > 0 && interactive) {
+		const unique = [...new Set(unmatchedCaptions)];
 		console.log('\nCaption names with no artist record:');
-		unmatchedCaptionNames.forEach((name, index) => console.log(`  ${index + 1}. ${name}`));
-		const answer = await ask(
-			'Create these artists? [Y] all, [n] none, or numbers e.g. 1,3: ',
-		);
+		unique.forEach((name, index) => console.log(`  ${index + 1}. ${name}`));
+		const answer = await ask('Create these artists? [Y] all, [n] none, or numbers e.g. 1,3: ');
 		const reply = answer.trim();
-		let chosen = unmatchedCaptionNames;
+		let chosen = unique;
 		if (/^n/i.test(reply)) chosen = [];
 		else if (reply && !/^y/i.test(reply)) {
 			const indexes = reply
 				.split(/[,\s]+/)
 				.map((value) => Number.parseInt(value, 10))
 				.filter((value) => Number.isInteger(value) && value > 0);
-			chosen = indexes
-				.map((index) => unmatchedCaptionNames[index - 1])
-				.filter(Boolean);
+			chosen = indexes.map((index) => unique[index - 1]).filter(Boolean);
 		}
-		for (const name of chosen) resolveArtist(name);
+		for (const name of chosen) await resolveNamed('artists', artists, name);
 	}
 
-	// Keep prompted answers so the next run has them, and so they can be edited
-	// by hand between an abort and a re-run.
-	if (options.save) {
-		const nextManifest = compact({
-			...manifest,
-			visit: compact({
-				...(manifest.visit ?? {}),
-				...(runLocationName ? { location: runLocationName } : {}),
-				...(runVisitDate ? { visitedAt: runVisitDate } : {}),
-			}),
-			defaults: {
-				...(manifest.defaults ?? {}),
-				...(runTags.length > 0 ? { tags: runTags } : {}),
-				keywords: importKeywords,
-			},
-		});
-		if (options.dryRun) {
-			console.log(`\nWould save answers to ${path.relative(ROOT, manifestPath)}:`);
-			for (const line of stringifyYaml(nextManifest).trimEnd().split('\n')) {
-				console.log(`  ${line}`);
+	// --- Per-photo metadata ---------------------------------------------------
+	for (const name of images) {
+		const manifestPhoto = manifestPhotos[name] ?? {};
+		const manifestKeys = new Set(
+			Object.keys(manifestPhoto).filter((key) => manifestPhoto[key] !== undefined),
+		);
+		const info = scanned.get(name);
+		const datestamp = datestampFor(name);
+		if (!datestamp) {
+			plan.warnings.push(`${name}: no capture date; skipped.`);
+			continue;
+		}
+
+		// Caption names that already match an artist are linked automatically.
+		const captionArtists = [];
+		if (!manifestKeys.has('artists')) {
+			for (const captionName of captionSegments(info.captionText)) {
+				const match = matchRecord(artists, captionName);
+				if (match.exact) captionArtists.push(match.exact);
 			}
-		} else {
-			await writeFile(manifestPath, stringifyYaml(nextManifest));
-			console.log(`\nSaved answers to ${path.relative(ROOT, manifestPath)}`);
 		}
-	}
-}
 
-const targetDatestamps = [...new Set(images.map((name) => datestampFor(name)))].sort();
+		const manifestArtistIds = [];
+		for (const artistName of manifestPhoto.artists ?? []) {
+			const resolved = await resolveNamed('artists', artists, artistName);
+			if (resolved) manifestArtistIds.push(resolved.id);
+		}
+		const artistIds = manifestKeys.has('artists')
+			? manifestArtistIds
+			: [...new Set([...captionArtists, ...manifestArtistIds].map((entry) => entry.id ?? entry))];
 
-/** Where a source file lands and whether that copy already exists. Cached. */
-const destinations = new Map();
-async function resolveDestination(name) {
-	const cached = destinations.get(name);
-	if (cached) return cached;
+		const workIds = [];
+		for (const workName of manifestPhoto.works ?? []) {
+			const resolved = await resolveNamed('works', works, workName);
+			if (resolved) workIds.push(resolved.id);
+		}
 
-	const sourcePath = path.join(sourceDir, name);
-	const extension = path.extname(name).toLowerCase();
-	const stem = path.basename(name, path.extname(name));
-	const safeStem = stem.replace(/\s+/g, '-').replace(/[^\p{L}\p{N}._-]/gu, '');
-	const datestamp = datestampFor(name);
-	const year = datestamp.slice(0, 4);
-	const destinationDir = path.join(CONTENT, 'photos', year, datestamp);
+		const photoExhibitionName = manifestPhoto.exhibition;
+		const photoExhibition = photoExhibitionName
+			? await resolveNamed('exhibitions', exhibitions, photoExhibitionName)
+			: undefined;
+		if (
+			photoExhibition &&
+			resolvedExhibitions.length > 0 &&
+			!resolvedExhibitions.some((exhibition) => exhibition.id === photoExhibition.id)
+		) {
+			plan.warnings.push(
+				`${name}: exhibition "${photoExhibitionName}" is not one of the visit's shows.`,
+			);
+		}
 
-	const baseFilename = `${datestamp}-${safeStem}`;
-	let filename = `${baseFilename}${extension}`;
-	let counter = 2;
-	let alreadyImported = false;
-	for (;;) {
-		const candidate = path.join(destinationDir, filename);
-		let digest;
+		// A show's tags fan out to photos of it; with a single show, that is every
+		// photo in the visit, so no per-photo `exhibition` is needed.
+		const exhibitTags = photoExhibition
+			? (exhibitionTags.get(photoExhibition.id) ?? [])
+			: resolvedExhibitions.length === 1
+				? (exhibitionTags.get(resolvedExhibitions[0].id) ?? [])
+				: [];
+		const keywordTags = info.keywordTags ?? [];
+		const manifestTags = manifestPhoto.tags ?? [];
+		const seen = new Set();
+		const tags = [];
+		for (const tag of [...folderTags, ...exhibitTags, ...keywordTags, ...manifestTags]) {
+			const slug = normalizeTag(tag);
+			if (!slug) continue;
+			const canonical = tagAliases.get(slug) ?? slug;
+			if (!seen.has(canonical)) {
+				seen.add(canonical);
+				tags.push(canonical);
+			}
+		}
+
+		const takenAt = manifestPhoto.takenAt ?? info.takenAt;
+
+		const sidecarData = {
+			takenAt: takenAt ? new Date(takenAt).toISOString() : undefined,
+			artists: artistIds.length > 0 ? artistIds : undefined,
+			works: workIds.length > 0 ? workIds : undefined,
+			tags: tags.length > 0 ? tags : undefined,
+			alt: manifestPhoto.alt,
+			sourceFilename: name,
+			sourceCaption: info.captionText,
+			exhibition: photoExhibition?.id,
+			visit: visit?.id,
+		};
+		for (const key of Object.keys(sidecarData)) {
+			if (sidecarData[key] === undefined) delete sidecarData[key];
+		}
+
+		// --- destination ---------------------------------------------------
+		const extension = path.extname(name).toLowerCase();
+		const safeStem = path.basename(name, extension).replace(/\s+/g, '-').replace(/[^\p{L}\p{N}._-]/gu, '');
+		const destinationDir = path.join(CONTENT, 'photos', year, datestamp);
+		let filename = `${datestamp}-${safeStem}${extension}`;
+		let counter = 2;
+		let alreadyImported = false;
+		for (;;) {
+			const candidate = path.join(destinationDir, filename);
+			try {
+				if ((await hashFile(candidate)) === (await hashFile(path.join(folder, name)))) {
+					alreadyImported = true;
+					break;
+				}
+				filename = `${datestamp}-${safeStem}-${counter}${extension}`;
+				counter += 1;
+			} catch {
+				break;
+			}
+		}
+
+		if (alreadyImported) plan.skipped.push(`${name} (already imported)`);
+		else plan.images.push({ sourcePath: path.join(folder, name), destination: path.join(destinationDir, filename) });
+
+		const sidecarStem = filename.slice(0, filename.length - extension.length);
+		const sidecarFile = path.join(destinationDir, `${sidecarStem}.md`);
+
+		const usefulKeys = ['artists', 'works', 'tags', 'alt', 'sourceCaption', 'exhibition', 'visit'];
+		const hasMetadata = usefulKeys.some((key) => sidecarData[key] !== undefined && sidecarData[key] !== '') ||
+			Boolean(manifestPhoto.note);
+
+		let existingSidecar;
 		try {
-			digest = await hashFile(candidate);
+			existingSidecar = await readFrontmatter(sidecarFile);
 		} catch {
-			break; // free slot
+			existingSidecar = undefined;
 		}
-		if (digest === (await hashFile(sourcePath))) {
-			alreadyImported = true;
-			break;
-		}
-		filename = `${baseFilename}-${counter}${extension}`;
-		counter += 1;
-	}
 
-	const resolved = {
-		sourcePath,
-		extension,
-		datestamp,
-		year,
-		destinationDir,
-		filename,
-		alreadyImported,
-	};
-	destinations.set(name, resolved);
-	return resolved;
-}
-
-const duplicates = [];
-for (const name of images) {
-	const resolved = await resolveDestination(name);
-	if (resolved.alreadyImported) duplicates.push(name);
-}
-
-if (duplicates.length > 0) {
-	if (interactive && !options.update) {
-		const answer = await ask(
-			`${duplicates.length} file(s) already imported. [s]kip or [u]pdate metadata: `,
-		);
-		if (/^u/i.test(answer.trim())) options.update = true;
-	}
-	console.log(
-		`Already imported: ${duplicates.length} file(s)${options.update ? ', updating sidecars' : ', skipping'}.`,
-	);
-}
-
-for (const name of images) {
-	const { sourcePath, extension, datestamp, year, destinationDir, filename, alreadyImported } =
-		await resolveDestination(name);
-	const metadata = manifestPhotos[name] ?? {};
-
-	const scannedInfo = scanned.get(name) ?? {};
-	const takenAt = metadata.takenAt ?? scannedInfo.takenAt;
-	const captionText = scannedInfo.captionText;
-	const keywordTags = scannedInfo.keywordTags ?? [];
-
-	// A caption segment that exactly matches a known artist name or alias is
-	// linked automatically. Everything else stays source text.
-	const segments = captionSegments(captionText);
-	const captionArtists = [];
-	for (const segment of segments) {
-		const artist = matchArtist(segment);
-		if (artist) captionArtists.push(artist);
-		else plan.warnings.push(`${name}: caption kept as source text: ${segment}`);
-	}
-
-	const manifestArtists = (metadata.artists ?? manifestDefaults.artists ?? []).map((artist) =>
-		resolveArtist(artist),
-	);
-	const artistIds = [
-		...new Set(
-			[...manifestArtists, ...captionArtists].filter(Boolean).map((artist) => artist.id),
-		),
-	];
-	const workEntries = (metadata.works ?? manifestDefaults.works ?? []).map((work) =>
-		resolveWork(work, metadata.artists ?? manifestDefaults.artists ?? []),
-	);
-	const visitWanted = Boolean(
-		metadata.location ||
-			metadata.visitDate ||
-			metadata.visitTitle ||
-			metadata.exhibitions ||
-			runLocation ||
-			runVisitDate ||
-			manifestVisit.title,
-	);
-	const visit = visitWanted
-		? resolveVisit({
-				datestamp,
-				locationId: metadata.location ? resolveLocation(metadata.location)?.id : runLocation?.id,
-				visitedAt: metadata.visitDate ?? runVisitDate ?? isoFromDatestamp(datestamp),
-				title: metadata.visitTitle ?? manifestVisit.title,
-				exhibitionTitles: metadata.exhibitions ?? manifestVisit.exhibitions,
-			})
-		: undefined;
-	const tags = resolveTags([
-		...runTags,
-		...(metadata.tags ?? []),
-		...(importKeywords ? keywordTags : []),
-	]);
-
-	const sidecarStem = path.basename(filename, extension);
-	const sidecarFile = path.join(destinationDir, `${sidecarStem}.md`);
-	const imageId = `${year}/${datestamp}/${sidecarStem}`;
-
-	if (alreadyImported) {
-		plan.skipped.push(`${filename} (already imported)`);
-	} else {
-		plan.images.push({ sourcePath, destination: path.join(destinationDir, filename) });
-	}
-
-	const sidecarData = {};
-	if (takenAt) sidecarData.takenAt = new Date(takenAt).toISOString();
-	if (artistIds.length > 0) sidecarData.artists = artistIds;
-	if (workEntries.length > 0) sidecarData.works = workEntries.map((work) => work.id);
-	if (metadata.alt) sidecarData.alt = String(metadata.alt);
-	if (tags.length > 0) sidecarData.tags = tags;
-	sidecarData.sourceFilename = name;
-	if (captionText) sidecarData.sourceCaption = captionText;
-
-	// Per the precedence rule, location only appears on a photo with no visit.
-	if (visit) sidecarData.visit = visit.id;
-
-	// A sidecar exists only for information worth keeping. A capture time or a
-	// source filename alone is not worth a file: both are derivable elsewhere.
-	const usefulKeys = [
-		'artists',
-		'works',
-		'tags',
-		'alt',
-		'sourceCaption',
-		'visit',
-		'location',
-		'exhibition',
-	];
-	const hasMetadata =
-		usefulKeys.some((key) => sidecarData[key] !== undefined && sidecarData[key] !== '') ||
-		Boolean(metadata.note);
-
-	let existingSidecar;
-	try {
-		existingSidecar = await readFrontmatter(sidecarFile);
-	} catch {
-		existingSidecar = undefined;
-	}
-
-	if (existingSidecar) {
-		const computed = Object.fromEntries(
-			Object.entries(sidecarData).filter(([, value]) => value !== undefined),
-		);
-		// By default existing sidecars only gain missing keys, so hand edits win.
-		// --update lets the manifest/EXIF overwrite what is already there.
-		const added = Object.keys(computed).filter((key) => existingSidecar.data[key] === undefined);
-		const changed = options.update
-			? Object.keys(computed).filter(
-					(key) =>
-						existingSidecar.data[key] !== undefined &&
-						!sameValue(existingSidecar.data[key], computed[key]),
-				)
-			: [];
-
-		if (added.length > 0 || changed.length > 0) {
+		if (existingSidecar) {
+			const merged = { ...existingSidecar.data };
+			const authoritativeKeys = new Set([
+				'visit',
+				'sourceFilename',
+				...(manifestKeys.has('artists') ? ['artists'] : []),
+				...(manifestKeys.has('works') ? ['works'] : []),
+				...(manifestKeys.has('tags') ? ['tags'] : []),
+				...(manifestKeys.has('exhibition') ? ['exhibition'] : []),
+				...(manifestKeys.has('alt') ? ['alt'] : []),
+				...(manifestKeys.has('takenAt') ? ['takenAt'] : []),
+			]);
+			for (const key of Object.keys(sidecarData)) {
+				if (authoritativeKeys.has(key) || existingSidecar.data[key] === undefined) {
+					merged[key] = sidecarData[key];
+				}
+			}
 			plan.sidecarUpdates.push({
 				file: sidecarFile,
-				id: imageId,
-				data: options.update
-					? { ...existingSidecar.data, ...computed }
-					: { ...computed, ...existingSidecar.data },
-				added,
-				changed,
-				body: existingSidecar.body,
+				data: merged,
+				body: manifestPhoto.note ? `${String(manifestPhoto.note).trim()}\n` : existingSidecar.body,
 			});
+			continue;
 		}
-		continue;
+
+		if (!hasMetadata) continue;
+		plan.sidecars.push({
+			file: sidecarFile,
+			data: sidecarData,
+			body: manifestPhoto.note ? `${String(manifestPhoto.note).trim()}\n` : '',
+		});
 	}
-
-	if (!hasMetadata) continue;
-
-	plan.sidecars.push({
-		file: sidecarFile,
-		id: imageId,
-		data: sidecarData,
-		body: metadata.note ? `${String(metadata.note).trim()}\n` : '',
-	});
 }
 
-function isoFromDatestamp(value) {
-	return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
-}
+// --- Run ---------------------------------------------------------------------
 
-// --- Report ---------------------------------------------------------------
+const topDir = path.resolve(ROOT, options.top);
+const folders = await discoverVisitFolders(topDir);
+for (const folder of folders) await importFolder(folder);
 
-console.log(`\nSource:  ${path.relative(ROOT, sourceDir)}`);
-console.log(
-	`Target:  ${targetDatestamps
-		.map((value) => `src/content/photos/${value.slice(0, 4)}/${value}`)
-		.join(', ')}`,
-);
+// --- Report ------------------------------------------------------------------
+
+console.log(`\nSource:  ${path.relative(ROOT, topDir)}`);
 console.log(`Images:  ${plan.images.length} to copy, ${plan.skipped.length} skipped`);
-console.log(
-	`Sidecars: ${plan.sidecars.length} new, ${plan.sidecarUpdates.length} updated (${plan.images.length - plan.sidecars.length} images need none)`,
-);
+console.log(`Sidecars: ${plan.sidecars.length} new, ${plan.sidecarUpdates.length} updated`);
 console.log(`Records:  ${plan.entities.length}`);
+for (const entity of plan.entities) console.log(`  ${entity}`);
+for (const sidecar of plan.sidecars) console.log(`  ${path.relative(ROOT, sidecar.file)}`);
+for (const update of plan.sidecarUpdates) console.log(`  ${path.relative(ROOT, update.file)} (update)`);
+for (const skipped of plan.skipped) console.log(`  ${skipped}`);
+for (const warning of plan.warnings) console.log(`  ! ${warning}`);
 
-if (plan.entities.length > 0) {
-	console.log('\nRecords created:');
-	for (const entity of plan.entities) console.log(`  ${entity}`);
-}
-if (plan.sidecars.length > 0) {
-	console.log('\nSidecars:');
-	for (const sidecar of plan.sidecars) {
-		console.log(`  ${path.relative(ROOT, sidecar.file)}`);
-	}
-}
-if (plan.sidecarUpdates.length > 0) {
-	console.log('\nSidecar updates:');
-	for (const update of plan.sidecarUpdates) {
-		const parts = [];
-		if (update.added.length > 0) parts.push(`adds ${update.added.join(', ')}`);
-		if (update.changed.length > 0) parts.push(`updates ${update.changed.join(', ')}`);
-		console.log(`  ${path.relative(ROOT, update.file)} (${parts.join('; ')})`);
-	}
-}
-if (plan.skipped.length > 0) {
-	console.log('\nSkipped:');
-	for (const skipped of plan.skipped) console.log(`  ${skipped}`);
-}
-if (plan.warnings.length > 0) {
-	console.log('\nWarnings:');
-	for (const warning of plan.warnings) console.log(`  ${warning}`);
+if (options.report) {
+	const lines = [
+		`Source: ${path.relative(ROOT, topDir)}`,
+		`Images: ${plan.images.length} to copy, ${plan.skipped.length} skipped`,
+		`Sidecars: ${plan.sidecars.length} new, ${plan.sidecarUpdates.length} updated`,
+		`Records: ${plan.entities.length}`,
+		...plan.entities.map((entity) => `  ${entity}`),
+		...plan.sidecars.map((sidecar) => `  ${path.relative(ROOT, sidecar.file)}`),
+		...plan.sidecarUpdates.map((update) => `  ${path.relative(ROOT, update.file)} (update)`),
+		...plan.warnings.map((warning) => `  ! ${warning}`),
+	];
+	await writeFile(path.resolve(ROOT, options.report), lines.join('\n') + '\n');
+	console.log(`\nReport written to ${options.report}`);
 }
 
-if (
-	options.dryRun &&
-	(plan.sidecars.length > 0 || plan.sidecarUpdates.length > 0)
-) {
-	console.log('\nSidecar preview:');
-	for (const sidecar of [...plan.sidecars, ...plan.sidecarUpdates]) {
-		console.log(`  ${path.relative(ROOT, sidecar.file)}`);
-		for (const line of stringifyYaml(sidecar.data).trimEnd().split('\n')) {
-			console.log(`    ${line}`);
-		}
-		if (sidecar.body) console.log(`    ${sidecar.body.trim()}`);
-	}
-}
-
-if (options.dryRun) {
-	console.log('\nDry run: nothing written.');
+if (options.preview) {
+	console.log('\nPreview: nothing written.');
 	prompt.close();
 	process.exit(0);
 }
@@ -859,7 +586,7 @@ if (!hasWork) {
 	process.exit(0);
 }
 
-if (!options.yes) {
+if (!options.apply) {
 	const answer = await ask('\nWrite these files? [y/N] ');
 	if (!/^y(es)?$/i.test(answer.trim())) {
 		console.log('Aborted.');
@@ -869,13 +596,14 @@ if (!options.yes) {
 }
 prompt.close();
 
-// --- Write ----------------------------------------------------------------
+// --- Write -------------------------------------------------------------------
 
 for (const image of plan.images) {
 	await mkdir(path.dirname(image.destination), { recursive: true });
 	await copyFile(image.sourcePath, image.destination);
 }
 for (const sidecar of plan.sidecars) {
+	await mkdir(path.dirname(sidecar.file), { recursive: true });
 	const frontmatter = stringifyYaml(sidecar.data).trimEnd();
 	const contents = `---\n${frontmatter}\n---\n${sidecar.body ? `\n${sidecar.body}` : ''}`;
 	await writeFile(sidecar.file, contents, { flag: 'wx' }).catch(async (error) => {
@@ -883,14 +611,11 @@ for (const sidecar of plan.sidecars) {
 		plan.warnings.push(`sidecar already exists, left alone: ${path.relative(ROOT, sidecar.file)}`);
 	});
 }
-
 for (const update of plan.sidecarUpdates) {
 	const frontmatter = stringifyYaml(update.data).trimEnd();
 	const body = (update.body ?? '').trim();
 	await writeFile(update.file, `---\n${frontmatter}\n---\n${body ? `\n${body}\n` : ''}`);
 }
-
-const written = new Set(plan.entities);
 for (const entity of plan.entities) {
 	const [collection, ...rest] = entity.split('/');
 	const id = rest.join('/').replace(/\.md$/, '');
@@ -912,5 +637,5 @@ for (const entity of plan.entities) {
 }
 
 console.log(
-	`\nDone. ${written.size} records, ${plan.images.length} images, ${plan.sidecars.length} new sidecars, ${plan.sidecarUpdates.length} updated.`,
+	`\nDone. ${plan.entities.length} records, ${plan.images.length} images, ${plan.sidecars.length} new sidecars, ${plan.sidecarUpdates.length} updated.`,
 );
