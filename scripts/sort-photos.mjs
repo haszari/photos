@@ -17,7 +17,6 @@
 import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { stringify as stringifyYaml } from 'yaml';
 import {
 	SUPPORTED,
 	MEDIA_EXTENSIONS,
@@ -132,15 +131,10 @@ for (const group of plan) {
 	await mkdir(group.dir, { recursive: true });
 	const manifest = group.manifest;
 	try {
+		const date = `${group.datestamp.slice(0, 4)}-${group.datestamp.slice(4, 6)}-${group.datestamp.slice(6, 8)}`;
 		await writeFile(
 			manifest,
-			`${stringifyYaml({
-				location: null,
-				name: null,
-				date: `${group.datestamp.slice(0, 4)}-${group.datestamp.slice(4, 6)}-${group.datestamp.slice(6, 8)}`,
-				exhibitions: null,
-				photos: {},
-			}).trimEnd()}\n`,
+			`# One visit: one location, one date.\nlocation:\n# A record may be a name, or an object with its frontmatter fields:\n# location:\n#   name: Auckland Art Gallery\n#   links:\n#     - url: https://aucklandartgallery.com\nname:\ndate: ${date}\nexhibitions:\n#   - Fiona Pardington\n#   - name: Ancient Worlds\n#     tags: [archaeology]\n#     links:\n#       - url: https://example.com/ancient-worlds\ntags:\nphotos: {}\n#   IMG_7302.jpeg:\n#     exhibition: Fiona Pardington\n#     artists: [Fiona Pardington]\n#     works: [A Beautiful Hesitation]\n#     tags: [photography]\n#     alt: Fiona Pardington room view\n#     note: |\n#       Room view from the south end.\n`,
 			{ flag: 'wx' },
 		);
 		console.log(`  wrote ${path.relative(ROOT, manifest)}`);

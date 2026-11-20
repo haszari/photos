@@ -129,6 +129,20 @@ async function readManifest(file) {
 	}
 }
 
+/**
+ * A record reference in the manifest: a plain name, or an object whose extra
+ * keys mirror the record's frontmatter (links, url, address, dates, …). `tags`
+ * fans out to photos and never lands on the record; `url` is a shorthand for
+ * `links: [{ url }]`.
+ */
+function recordRef(raw) {
+	if (typeof raw === 'string') return { name: raw, tags: [], extra: {} };
+	if (!raw || typeof raw !== 'object') return { name: '', tags: [], extra: {} };
+	const { name = raw.id ?? '', tags = [], url, ...extra } = raw;
+	if (url && !extra.links) extra.links = [{ url }];
+	return { name: String(name), tags: Array.isArray(tags) ? tags : [], extra };
+}
+
 const plan = {
 	images: [],
 	sidecars: [],
@@ -172,7 +186,7 @@ const interactive = !options.apply && Boolean(process.stdin.isTTY);
 const KIND_PATH = { locations: 'locations', artists: 'artists', works: 'works', exhibitions: 'exhibitions' };
 
 /** Resolve a typed name against a collection, creating it when nothing matches. */
-async function resolveNamed(kind, records, name) {
+async function resolveNamed(kind, records, name, extra = {}) {
 	if (!name) return undefined;
 	const result = matchRecord(records, name);
 	if (result.exact) return { id: result.exact.id, created: false };
@@ -192,20 +206,20 @@ async function resolveNamed(kind, records, name) {
 			if (Number.isInteger(number) && result.close[number - 1]) {
 				return { id: result.close[number - 1].id, created: false };
 			}
-			if (/^c/i.test(trimmed)) return createNamed(kind, records, name);
-			if (trimmed) return resolveNamed(kind, records, trimmed);
-			return createNamed(kind, records, name);
+			if (/^c/i.test(trimmed)) return createNamed(kind, records, name, extra);
+			if (trimmed) return resolveNamed(kind, records, trimmed, extra);
+			return createNamed(kind, records, name, extra);
 		}
 		console.log(`  ${name}: several close matches; creating a new ${kind.slice(0, -1)}.`);
 	}
-	return createNamed(kind, records, name);
+	return createNamed(kind, records, name, extra);
 }
 
-function createNamed(kind, records, name) {
+function createNamed(kind, records, name, extra = {}) {
 	const id = slugify(name);
 	const existing = records.find((record) => record.id === id);
 	if (existing) return { id: existing.id, created: false };
-	records.push({ id, data: { name } });
+	records.push({ id, data: { name, ...extra } });
 	plan.entities.push(`${KIND_PATH[kind]}/${id}.md`);
 	return { id, created: true };
 }
@@ -236,7 +250,9 @@ async function importFolder(folder) {
 	console.log(`\n── ${path.relative(ROOT, folder)}`);
 
 	// --- Location (required) -------------------------------------------------
-	let locationName = typeof manifest.location === 'string' ? manifest.location : undefined;
+	const locationRef = recordRef(manifest.location);
+	let locationName = locationRef.name || undefined;
+	const locationExtra = locationRef.extra;
 	if (interactive) {
 		const answer = await ask(`Location${locationName ? ` (${locationName})` : ''}: `);
 		if (answer.trim()) locationName = answer.trim();
@@ -246,27 +262,28 @@ async function importFolder(folder) {
 	}
 
 	// --- Exhibitions (optional) ------------------------------------------------
-	// Entries are names, or `{ name, tags }` so a show can carry a common tag
-	// that fans into every photo of it. Prompted answers are plain names.
+	// Entries are names, or `{ name, tags, ...record fields }` so a show can
+	// carry tags that fan out plus its own links, dates, etc.
 	const rawExhibitions = Array.isArray(manifest.exhibitions) ? manifest.exhibitions : [];
-	let exhibitionEntries = rawExhibitions.map((entry) =>
-		typeof entry === 'string'
-			? { name: entry, tags: [] }
-			: {
-					name: String(entry?.name ?? entry?.id ?? ''),
-					tags: Array.isArray(entry?.tags) ? entry.tags : [],
-				},
-	);
+	let exhibitionEntries = rawExhibitions.map((entry) => {
+		const ref = recordRef(entry);
+		return { name: ref.name, tags: ref.tags, extra: ref.extra };
+	});
 	if (interactive) {
 		const existing = exhibitionEntries.map((entry) => entry.name).join(', ');
 		const answer = await ask(
 			`Exhibitions, comma-separated${existing ? ` (${existing})` : ''} (blank for none): `,
 		);
-		if (answer.trim()) exhibitionEntries = splitList(answer).map((name) => ({ name, tags: [] }));
+		if (answer.trim()) {
+			exhibitionEntries = splitList(answer).map((name) => ({ name, tags: [], extra: {} }));
+		}
 	}
 
 	// --- Visit-wide tags (fanned into every photo) ----------------------------
-	let folderTags = Array.isArray(manifest.tags) ? manifest.tags : [];
+	let folderTags = [
+		...(Array.isArray(manifest.tags) ? manifest.tags : []),
+		...locationRef.tags,
+	];
 	if (interactive) {
 		const answer = await ask(
 			`Tags, comma-separated${folderTags.length > 0 ? ` (${folderTags.join(', ')})` : ''} (blank for none): `,
@@ -290,14 +307,21 @@ async function importFolder(folder) {
 
 	// --- Save the completed manifest -----------------------------------------
 	const nextManifest = compact({
-		location: locationName ?? manifest.location,
+		location: locationName
+			? Object.keys(locationExtra).length > 0
+				? { name: locationName, ...locationExtra }
+				: locationName
+			: manifest.location,
 		name: manifest.name,
 		date: manifest.date,
 		exhibitions:
 			exhibitionEntries.length > 0
-				? exhibitionEntries.map((entry) =>
-						entry.tags.length > 0 ? { name: entry.name, tags: entry.tags } : entry.name,
-					)
+				? exhibitionEntries.map((entry) => {
+						const object = { name: entry.name };
+						if (entry.tags.length > 0) object.tags = entry.tags;
+						Object.assign(object, entry.extra);
+						return Object.keys(object).length > 1 ? object : entry.name;
+					})
 				: undefined,
 		tags: folderTags.length > 0 ? folderTags : undefined,
 		photos: manifestPhotos,
@@ -314,11 +338,13 @@ async function importFolder(folder) {
 	}
 
 	// --- Resolve records ------------------------------------------------------
-	const location = locationName ? await resolveNamed('locations', locations, locationName) : undefined;
+	const location = locationName
+		? await resolveNamed('locations', locations, locationName, locationExtra)
+		: undefined;
 	const resolvedExhibitions = [];
 	const exhibitionTags = new Map();
 	for (const entry of exhibitionEntries) {
-		const resolved = await resolveNamed('exhibitions', exhibitions, entry.name);
+		const resolved = await resolveNamed('exhibitions', exhibitions, entry.name, entry.extra);
 		if (resolved) {
 			resolvedExhibitions.push(resolved);
 			if (entry.tags.length > 0) exhibitionTags.set(resolved.id, entry.tags);
