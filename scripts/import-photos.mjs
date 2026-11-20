@@ -147,6 +147,7 @@ const plan = {
 	images: [],
 	sidecars: [],
 	sidecarUpdates: [],
+	visitUpdates: [],
 	entities: [],
 	skipped: [],
 	warnings: [],
@@ -402,7 +403,23 @@ async function importFolder(folder) {
 	let visit = undefined;
 	if (location && visitId) {
 		visit = visits.find((entry) => entry.id === visitId);
-		if (visit) stats.visits.reused.add(visit.id);
+		if (visit) {
+			stats.visits.reused.add(visit.id);
+			// Several folders can be the same location and day; accumulate their
+			// exhibitions onto the one visit rather than dropping later shows.
+			const existing = visit.data.exhibitions ?? [];
+			const added = resolvedExhibitions
+				.filter((exhibition) => !existing.includes(exhibition.id))
+				.map((exhibition) => exhibition.id);
+			if (added.length > 0 || (manifest.name && !visit.data.name)) {
+				visit.data = {
+					...visit.data,
+					...(added.length > 0 ? { exhibitions: [...existing, ...added] } : {}),
+					...(manifest.name && !visit.data.name ? { name: manifest.name } : {}),
+				};
+				plan.visitUpdates.push({ id: visit.id, data: visit.data });
+			}
+		}
 		if (!visit) {
 			const data = {
 				location: location.id,
@@ -647,6 +664,7 @@ const details = [
 	...plan.entities.map((entity) => `  ${entity}`),
 	...plan.sidecars.map((sidecar) => `  ${path.relative(ROOT, sidecar.file)}`),
 	...plan.sidecarUpdates.map((update) => `  ${path.relative(ROOT, update.file)} (update)`),
+	...plan.visitUpdates.map((update) => `  visits/${update.id}.md (update)`),
 	...plan.skipped.map((skipped) => `  ${skipped}`),
 	...plan.warnings.map((warning) => `  ! ${warning}`),
 ];
@@ -738,6 +756,13 @@ for (const entity of plan.entities) {
 	await writeFile(file, `---\n${frontmatter}\n---\n`, { flag: 'wx' }).catch((error) => {
 		if (error.code !== 'EEXIST') throw error;
 	});
+}
+
+for (const update of plan.visitUpdates) {
+	const file = path.join(CONTENT, 'visits', `${update.id}.md`);
+	await mkdir(path.dirname(file), { recursive: true });
+	const frontmatter = stringifyYaml(update.data).trimEnd();
+	await writeFile(file, `---\n${frontmatter}\n---\n`);
 }
 
 console.log('\nDone.');
