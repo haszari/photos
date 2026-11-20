@@ -147,16 +147,19 @@ src/content/
   tag-metadata/tags.yml
 ```
 
+Arrows read as containment — a photo is in a visit, a visit is at a location;
+the artist, work and tag edges read `by`, `of` and `tagged`.
+
 ```mermaid
 graph LR
-    photo((photo)) --> visit(visit)
-    photo --> artist(artist)
-    photo --> work(work)
-    photo --> tag(tag)
-    photo --> exhibition(exhibition)
-    visit --> location(location)
-    visit --> exhibition
-    work --> artist
+    photo((photo)) -->|in| visit(visit)
+    photo -->|by| artist(artist)
+    photo -->|of| work(work)
+    photo -->|tagged| tag(tag)
+    photo -->|in| exhibition(exhibition)
+    visit -->|at| location(location)
+    visit -->|shows| exhibition
+    work -->|by| artist
 ```
 
 - Tags belong only to photos; visit and exhibition tags are added to the photos at import.
