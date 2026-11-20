@@ -152,6 +152,15 @@ const plan = {
 	warnings: [],
 };
 
+/** Distinct records added vs already-existing, by collection. */
+const stats = {
+	locations: { added: new Set(), reused: new Set() },
+	artists: { added: new Set(), reused: new Set() },
+	works: { added: new Set(), reused: new Set() },
+	exhibitions: { added: new Set(), reused: new Set() },
+	visits: { added: new Set(), reused: new Set() },
+};
+
 const [locations, artists, works, exhibitions, visits] = await Promise.all([
 	walkMarkdown(path.join(CONTENT, 'locations')),
 	walkMarkdown(path.join(CONTENT, 'artists')),
@@ -196,6 +205,12 @@ const MANIFEST_HEADER = [
 
 /** Resolve a typed name against a collection, creating it when nothing matches. */
 async function resolveNamed(kind, records, name, extra = {}) {
+	const result = await matchOrCreate(kind, records, name, extra);
+	if (result && stats[kind]) stats[kind][result.created ? 'added' : 'reused'].add(result.id);
+	return result;
+}
+
+async function matchOrCreate(kind, records, name, extra = {}) {
 	if (!name) return undefined;
 	const result = matchRecord(records, name);
 	if (result.exact) return { id: result.exact.id, created: false };
@@ -216,7 +231,7 @@ async function resolveNamed(kind, records, name, extra = {}) {
 				return { id: result.close[number - 1].id, created: false };
 			}
 			if (/^c/i.test(trimmed)) return createNamed(kind, records, name, extra);
-			if (trimmed) return resolveNamed(kind, records, trimmed, extra);
+			if (trimmed) return matchOrCreate(kind, records, trimmed, extra);
 			return createNamed(kind, records, name, extra);
 		}
 		console.log(`  ${name}: several close matches; creating a new ${kind.slice(0, -1)}.`);
@@ -387,6 +402,7 @@ async function importFolder(folder) {
 	let visit = undefined;
 	if (location && visitId) {
 		visit = visits.find((entry) => entry.id === visitId);
+		if (visit) stats.visits.reused.add(visit.id);
 		if (!visit) {
 			const data = {
 				location: location.id,
@@ -405,6 +421,7 @@ async function importFolder(folder) {
 			visit = { id: visitId, data };
 			visits.push(visit);
 			plan.entities.push(`visits/${visitId}.md`);
+			stats.visits.added.add(visit.id);
 		}
 	}
 
@@ -605,26 +622,51 @@ for (const folder of folders) await importFolder(folder);
 
 // --- Report ------------------------------------------------------------------
 
-console.log(`\nSource:  ${path.relative(ROOT, topDir)}`);
-console.log(`Images:  ${plan.images.length} to copy, ${plan.skipped.length} skipped`);
-console.log(`Sidecars: ${plan.sidecars.length} new, ${plan.sidecarUpdates.length} updated`);
-console.log(`Records:  ${plan.entities.length}`);
-for (const entity of plan.entities) console.log(`  ${entity}`);
-for (const sidecar of plan.sidecars) console.log(`  ${path.relative(ROOT, sidecar.file)}`);
-for (const update of plan.sidecarUpdates) console.log(`  ${path.relative(ROOT, update.file)} (update)`);
-for (const skipped of plan.skipped) console.log(`  ${skipped}`);
-for (const warning of plan.warnings) console.log(`  ! ${warning}`);
+const ENTITY_LABELS = {
+	locations: 'Locations',
+	artists: 'Artists',
+	works: 'Works',
+	exhibitions: 'Exhibitions',
+	visits: 'Visits',
+};
+
+function summaryLines() {
+	const lines = [
+		`  Photos: ${plan.images.length} added, ${plan.sidecarUpdates.length} metadata updated, ${plan.skipped.length} skipped`,
+	];
+	for (const kind of ['locations', 'artists', 'works', 'exhibitions', 'visits']) {
+		const added = stats[kind].added.size;
+		const updated = stats[kind].reused.size;
+		if (added + updated === 0) continue;
+		lines.push(`  ${ENTITY_LABELS[kind]}: ${added} added, ${updated} updated`);
+	}
+	return lines;
+}
+
+const details = [
+	...plan.entities.map((entity) => `  ${entity}`),
+	...plan.sidecars.map((sidecar) => `  ${path.relative(ROOT, sidecar.file)}`),
+	...plan.sidecarUpdates.map((update) => `  ${path.relative(ROOT, update.file)} (update)`),
+	...plan.skipped.map((skipped) => `  ${skipped}`),
+	...plan.warnings.map((warning) => `  ! ${warning}`),
+];
+
+console.log(`\nSource: ${path.relative(ROOT, topDir)}`);
+console.log('Summary');
+for (const line of summaryLines()) console.log(line);
+if (details.length > 0) {
+	console.log('\nFiles');
+	for (const line of details) console.log(line);
+}
 
 if (options.report) {
 	const lines = [
 		`Source: ${path.relative(ROOT, topDir)}`,
-		`Images: ${plan.images.length} to copy, ${plan.skipped.length} skipped`,
-		`Sidecars: ${plan.sidecars.length} new, ${plan.sidecarUpdates.length} updated`,
-		`Records: ${plan.entities.length}`,
-		...plan.entities.map((entity) => `  ${entity}`),
-		...plan.sidecars.map((sidecar) => `  ${path.relative(ROOT, sidecar.file)}`),
-		...plan.sidecarUpdates.map((update) => `  ${path.relative(ROOT, update.file)} (update)`),
-		...plan.warnings.map((warning) => `  ! ${warning}`),
+		'Summary',
+		...summaryLines(),
+		'',
+		'Files',
+		...details,
 	];
 	await writeFile(path.resolve(ROOT, options.report), lines.join('\n') + '\n');
 	console.log(`\nReport written to ${options.report}`);
@@ -698,6 +740,4 @@ for (const entity of plan.entities) {
 	});
 }
 
-console.log(
-	`\nDone. ${plan.entities.length} records, ${plan.images.length} images, ${plan.sidecars.length} new sidecars, ${plan.sidecarUpdates.length} updated.`,
-);
+console.log('\nDone.');
