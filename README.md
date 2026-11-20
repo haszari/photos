@@ -4,7 +4,7 @@ A photo archive. Every photo is its own page, linked to the artist, work,
 location, visit, exhibition and tags it belongs to. The site is static — built
 into plain files at deploy time, no database, no client-side data fetching.
 
-Hosted at <https://lab.cartoonbeats.com/photos/>.
+Hosted at https://lab.cartoonbeats.com/photos/.
 
 ## Importing photos
 
@@ -121,7 +121,7 @@ npm run convert:videos -- ./incoming/20261114
 
 | Route | Page |
 |---|---|
-| `/` | all photos, reverse-chronological, grouped into a masonry grid |
+| `/` | all photos, grouped by visit (or date), newest first |
 | `/photos/{yyyymmdd}/{slug}/` | one photo or video with its metadata card |
 | `/artists/` | artist index |
 | `/locations/` | location index |
@@ -132,9 +132,6 @@ npm run convert:videos -- ./incoming/20261114
 | `/visits/{id}/` | photos from one visit |
 | `/exhibitions/{id}/` | photos from one exhibition |
 | `/tags/{tag}/` | photos with one tag |
-
-Navigation is a top bar: home on the left, browse links on the right, on every
-page. Each entity page shows a title, an optional facts line, and its photos.
 
 ### Content model
 
@@ -150,17 +147,21 @@ src/content/
   tag-metadata/tags.yml
 ```
 
-- A photo belongs to a visit — a place on a day — and a visit belongs to a
-  location.
-- A visit can list several exhibitions; a photo can name the one show it
-  depicts.
-- A photo credits artists and works, and carries tags.
-- Tags belong only to photos. Visit and exhibition tags are added to the photos
-  at import, so the model stays flat.
-- Every record with its own page has a `name` and optional `links` (external
-  pages such as gallery sites).
-- Hidden tags — `art`, `desktop`, `wallpaper`, `mobile` — stay on the photo but
-  appear nowhere: they describe the file's medium, not its subject.
+```mermaid
+graph LR
+    photo((photo)) --> visit(visit)
+    photo --> artist(artist)
+    photo --> work(work)
+    photo --> tag(tag)
+    photo --> exhibition(exhibition)
+    visit --> location(location)
+    visit --> exhibition
+    work --> artist
+```
+
+- Tags belong only to photos; visit and exhibition tags are added to the photos at import.
+- Records carry a `name` and optional `links`.
+- Hidden tags (`art`, `desktop`, `wallpaper`, `mobile`) stay on the photo but appear nowhere.
 
 ## Developing
 
