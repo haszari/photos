@@ -1,265 +1,115 @@
 # Photos
 
-Astro photo site. Each photo is a page; photos join optional metadata sidecars
-to artists, works, locations, visits, exhibitions, and tags at build
-time. No database, no runtime lookup, no client-side data fetching.
+A photo archive: every photo is its own page, and each photo is linked to the
+artist, work, location, visit, exhibition and tags it belongs to. Everything is
+static — built into plain files at deploy time, no database, no client-side
+data fetching.
 
-Deployed to `https://lab.cartoonbeats.com/photos/` (GitHub Pages project site
-under a user custom domain), so every internal link goes through
-`src/lib/url.ts`.
+Live at **<https://lab.cartoonbeats.com/photos/>**.
 
-Deploys are automatic: `.github/workflows/deploy.yml` builds with
-`withastro/action` and publishes with `deploy-pages` on every push to `main`
-(or from the Actions tab). GitHub needs **Settings → Pages → Source: GitHub
-Actions** once per repo.
+## Importing photos
 
-Node: `.nvmrc` and CI both use 26 (Active LTS); `package.json` accepts 24 and
-up so an older local install still builds.
+An import is a folder of photos that make up **one visit** — one place on one
+day. Apple Photos exports "moments" that are exactly that.
 
-## Commands
+1. **Export from Apple Photos** — File → Export → Export Photos…, JPEG at
+   maximum quality, and tick **Caption** and **Keywords**.
+2. **Put each moment folder into `incoming/`.** One folder = one visit. The
+   folder name is only a label, e.g. `Auckland, 29 June 2025`.
+3. **Sort, only if you have a flat pile of mixed dates:**
+   ```sh
+   npm run sort:photos -- ~/Desktop/raw-export
+   ```
+   This splits it into dated folders under `incoming/` with a draft
+   `photos.yml` in each.
+4. **Import.** It asks once per folder for the location and exhibitions, writes
+   those answers into that folder's `photos.yml`, and imports the photos:
+   ```sh
+   npm run import:photos
+   ```
+   Import again after editing `photos.yml` — already-imported photos are
+   recognised, and only your changed answers are applied.
 
-```sh
-npm install
-npm run dev                    # astro dev --background is fine too
-npm run build                  # runs the photo-access guard, then astro build
-npm run preview
-npm run scaffold:photos -- <source-dir> [--date yyyymmdd] [--yes] [--dry-run] [--update]
-npm run convert:videos -- <file-or-dir> [--mode boomerang|loop] [--max-width 3840] [--fps n] [--crf 18] [--max-duration 6] [--force] [--dry-run]
-```
+The loop is: export → answer location and shows → import → review → edit
+`photos.yml` → import again. `--preview` shows the plan without writing;
+`--apply` skips all prompts.
 
-## Adding photos
+### The manifest (`photos.yml`)
 
-1. Export JPEGs from Apple Photos into a folder, e.g. `incoming/20261118/`.
-   The folder name is only a label — each photo's directory date comes from its
-   own EXIF capture time.
-2. Optionally add `incoming/20261118/photos.yml` describing the visit and any
-   per-photo metadata.
-3. Run the scaffolder, review `git diff`, commit images and records together.
+One per folder, written by the importer and hand-editable:
 
-```sh
-npm run scaffold:photos -- ./incoming/20261118
-```
-
-`--date yyyymmdd` is an override, not a requirement. Without it, dates come from
-EXIF, so one folder may write to several date directories. Photos with no EXIF
-date fall back to the visit date, then to a single prompt.
-
-The scaffolder copies images unchanged and writes a metadata sidecar only when
-there is metadata. Existing files are never overwritten: identical files are
-skipped, different files get a `-2` suffix.
-
-### Videos (boomerangs, cinematographs)
-
-Phones export `.mov`; browsers want `.mp4`. Convert first, then scaffold:
-
-```sh
-npm run convert:videos -- ./incoming/20261114/IMG_9171.mov      # one file
-npm run convert:videos -- ./incoming/20261114                   # whole folder
-
-npm run scaffold:photos -- ./incoming/20261114
-```
-
-- **boomerang** (default): forward + reversed, so it loops seamlessly — the cinematograph look.
-- **loop**: straight trimmed clip.
-- Output is `<stem>.mp4` beside the source: H.264, `yuv420p`, `+faststart`, **no audio**, trimmed to `--max-duration` (default 6s).
-- Resolution and frame rate are preserved. The only resizing is a downscale when the source is wider than `--max-width` (default 3840, i.e. 4K) — nothing is upscaled.
-- Quality is `--crf 18` (x264, `preset slow`): visually near-lossless. Raise the CRF for smaller files, lower it for more fidelity. Existing outputs are skipped unless `--force`.
-- The scaffolder treats `mp4`/`webm` like any other asset: copied unchanged into the date directory, optional sidecar, same date derivation (ffprobe `creation_time`, then manifest, then prompt).
-- On the site the asset renders as `<video autoplay muted loop playsinline>` instead of an `<img>`, so it behaves as a live image in the masonry grid. This is the only autoplaying media on the site; there is no JS to pause it for `prefers-reduced-motion` — a known limitation if that matters later.
-
-### Adding a visit, exhibition or location by hand
-
-Records are plain Markdown; the filename is the id, so `cornelia-parker.md` becomes
-`/exhibitions/cornelia-parker/`.
-
-```md
----
-# src/content/exhibitions/cornelia-parker.md
-name: Cornelia Parker
-startDate: 2026-10-04
-endDate: 2027-01-11
-links:
-  - url: https://citygallery.org.nz/exhibition/cornelia-parker/
----
-
-Notes about the show. Markdown body is free text and renders under the facts line.
-```
-
-```md
----
-# src/content/visits/2026/20261114-city-gallery-wellington.md
-location: city-gallery-wellington
-visitedAt: 2026-11-14
+```yaml
+location: Auckland Art Gallery
+date: 2025-06-29
 exhibitions:
-  - cornelia-parker
----
-```
-
-Then point photos at the visit with `visit: 2026/20261114-city-gallery-wellington`
-in their sidecar (the scaffolder does this from `photos.yml`).
-
-**Names.** Every record with a page of its own — artist, location, work,
-exhibition, visit — takes its display name from `name`, and only from `name`.
-Those collections are built with `entitySchema()` from `src/lib/schema.ts`, which
-adds the required field, so a new record type cannot invent `title` and quietly
-lose its heading. `visits` may omit `name` and fall back to the location's.
-
-**Links.** Every record type — artist, location, exhibition, work, visit — accepts
-`links`, a list of `{ label?, url }`. A missing label falls back to the hostname
-(`citygallery.org.nz`), so one artist can list several profile pages:
-
-```yaml
-links:
-  - url: https://www.instagram.com/example/
-  - label: Tate profile
-    url: https://www.tate.org.uk/art/artists/example
-```
-
-**Where they show.** A record with one link renders its title as that link with a
-small `↗` indicator. With several links, the title links the first and all of
-them are listed in the facts line.
-
-**Special case.** An exhibition whose title matches one of the photo's artist
-names is hidden in the photo metadata card — it would just repeat the artist
-line. It still appears on the visit page and has its own page.
-
-### Exporting from Apple Photos
-
-Export in Photos with **File → Export → Export Photos…**, not `Export Unmodified
-Original` and not drag-and-drop. In the export sheet set:
-
-- **Photo Kind:** JPEG
-- **Quality:** Maximum
-- **Include:** tick **Caption**, **Keywords**, and any location/title fields you use
-
-Why it matters:
-
-| Export path | Caption | Keywords |
-|---|---|---|
-| Export Photos… with Include ticked | ✔ XMP `dc:description` | ✔ XMP `dc:subject` |
-| Export Unmodified Original | usually dropped | usually dropped |
-| Drag from Photos to Finder | dropped | dropped |
-
-Captions are read as `sourceCaption`. A caption segment that exactly matches a
-known artist name or alias links to that artist automatically; the rest is kept
-as source text with a warning. Keywords become tags, and the scaffolder asks
-whether to import them.
-
-What the export cannot provide, and where it comes from instead:
-
-| Metadata | Source |
-|---|---|
-| capture time | EXIF `DateTimeOriginal`, or `takenAt` in `photos.yml` |
-| caption / artist hint | XMP `dc:description` → `sourceCaption`, then prompt or `photos.yml` |
-| keywords / tags | XMP `dc:subject`, then prompt or `photos.yml` |
-| location, visit, exhibition | prompt or `photos.yml` |
-| work title and date | `photos.yml` only |
-| alt text | `photos.yml` only |
-
-HEIC, TIFF, GIF and video are listed as warnings and not imported. If captions
-are missing from the exported files, the export path — not the script — dropped
-them: check a file with `exiftool <file> | grep -i description` before
-re-exporting, and if captions are unavailable, put the artist in `photos.yml`
-or answer the prompts.
-
-### `photos.yml`
-
-```yaml
-visit:
-  location: City Gallery Wellington
-  visitedAt: 2026-11-18
-  exhibitions: [Some Exhibition]
-defaults:
-  tags: [painting]
+  - Fiona Pardington
+  - name: Ancient Worlds
+    tags: [archaeology]
+tags: [gallery]
 photos:
-  IMG_4984.jpg:
-    artists: [Colin McCahon]
-    works:
-      - title: Landscape with Too Few Details
-        date: "1964"
-    tags: [oil-paint]
-    takenAt: 2026-11-18T14:32:00+13:00
-    alt: McCahon painting, room view
-    note: |
-      Room view from the south end.
+  IMG_7302.jpeg:
+    exhibition: Fiona Pardington
+    artists: [Fiona Pardington]
+    tags: [photography]
 ```
 
-The file is optional. Without it, dates come from EXIF, and the scaffolder
-prompts for anything missing.
+- `location` and `exhibitions` take a name or an id; a close-match typo is
+  corrected, an unmatched name becomes a new record.
+- `tags` and each exhibition's `tags` are added to the photos of that
+  visit/show — tags live only on photos, never on records.
+- Dates come from the photos themselves; `date` overrides for the whole folder.
 
-## Content layout
+### Videos
+
+Phones export `.mov`; browsers want `.mp4`. Convert before importing:
+
+```sh
+npm run convert:videos -- ./incoming/20261114
+```
+
+Default is a boomerang (forward + reversed, seamless loop); `--mode loop` for a
+straight clip.
+
+## Content model
 
 ```text
 src/content/
+  photos/<year>/<yyyymmdd>/<yyyymmdd>-<stem>.jpg   # the image
+  photos/<year>/<yyyymmdd>/<yyyymmdd>-<stem>.md    # its metadata
   artists/<id>.md
   locations/<id>.md
   exhibitions/<id>.md
   works/<id>.md
   visits/<year>/<yyyymmdd>-<location>.md
   tag-metadata/tags.yml
-  photos/<year>/<yyyymmdd>/<yyyymmdd>-<stem>.jpg      # committed full quality
-  photos/<year>/<yyyymmdd>/<yyyymmdd>-<stem>.md       # optional metadata
 ```
 
-Sidecars do **not** store an image path: the image is discovered by basename in
-`src/lib/photos.ts`. References use bare entry ids (`colin-mccahon`,
-`2026/20261118-city-gallery-wellington`), not collection-prefixed paths.
+In plain terms:
 
-A photo's location resolves as `photo.visit.location` first, then
-`photo.location`. Photos group by visit when one is recorded, otherwise by date
-directory.
+- A **photo** belongs to a **visit** — a place on a day — and a visit belongs
+  to a **location**.
+- A visit can list several **exhibitions**; a photo can name the one show it
+  depicts.
+- A photo credits **artists** and **works**, and carries **tags**.
+- **Tags** belong only to photos. Visit and exhibition tags are added to the
+  photos at import, so the site model stays flat.
 
-**Hidden tags.** Tags that describe the medium or the delivery format rather than
-the subject — `art`, `desktop`, `wallpaper`, `mobile` — stay in the sidecar but are
-filtered out everywhere they would otherwise appear: the metadata card, the tag
-cloud, and the tag pages (so those four have no page at all). The list is
-`HIDDEN_TAGS` in `src/lib/tags.ts`.
+Every record with its own page has a `name` and optional `links` (external
+pages such as gallery sites). A record with a single link renders its title as
+that link.
 
-## Licensing
+**Hidden tags** — `art`, `desktop`, `wallpaper`, `mobile` — stay on the photo
+but appear nowhere: they describe the file's medium, not its subject.
 
-- **Photos, captions and notes** — [CC BY 4.0](LICENSE). Attribution: Rua Haszard (haszari), https://cartoonbeats.com, source https://lab.cartoonbeats.com/photos/.
-- **Site code** — [MIT](LICENSE-CODE).
-
-Constants live in `src/lib/license.ts`. Every page emits `<link rel="license">`, a canonical URL, and JSON-LD with `creator` and `license`; photo pages emit an additional `ImageObject`. Nothing is visible on the page — a future `/about/` page can render `ATTRIBUTION_LINE` from the same module.
-
-Per-photo creator attribution is not implemented yet. When other people commit photos, the intended rule is to credit the git committer of each image, so a per-photo `credit` field can be derived from history rather than typed by hand.
-
-### Incremental runs
-
-The loop is: run → review → abort or accept → edit `photos.yml` → run again.
+## Developing
 
 ```sh
-npm run scaffold:photos -- ./incoming/20261118 --dry-run   # review plan, no writes
-npm run scaffold:photos -- ./incoming/20261118             # prompts + import
+npm install
+npm run dev
+npm run build
 ```
 
-- Missing answers are prompted: directory date (only if EXIF has none), location, visit date, tags, whether to import Photos keywords, and which unmatched caption names should become artist records.
-- Caption prompt lists every name in the run's captions that has no artist record: `[Y] all`, `[n] none`, or numbers like `1,3`. Accepted names become `artists/<slug>.md` and are linked in the sidecars; rejected names stay as `sourceCaption` text with a warning.
-- Prompted answers are written back into `./incoming/20261118/photos.yml` before the confirm step, so an aborted run still keeps your answers. Disable with `--no-save`.
-- Already-imported files are recognised by content hash. The run reports how many and, when interactive, asks `[s]kip` or `[u]pdate metadata`.
-- By default an existing sidecar only gains keys it is missing, so hand edits are never overwritten. `--update` (or answering `u`) lets the manifest and EXIF overwrite existing fields.
-- Nothing left to do prints `Nothing to import` and exits 0.
+Deploys to GitHub Pages automatically on every push to `main` (GitHub Actions;
+enable Pages → Source: GitHub Actions once per repo).
 
-### When no sidecar is written
-
-A sidecar is created only for information worth keeping: `artists`, `works`, `tags`, `alt`, `sourceCaption`, `visit`, `location`, `exhibition`, or a note. A capture time or source filename on its own is not enough — both are recoverable, so those photos get an image and no Markdown file.
-
-Captions: Apple's `Export Photos…` writes the caption to XMP `dc:description`, which appears as `sourceCaption`. The caption is treated as `Artist | Artist` **only when a segment matches an existing artist name or alias**, or when you accept the create-artists prompt. Anything else stays as source text with a warning — a caption is not assumed to name a person. `Export Unmodified Original` and drag-and-drop can drop captions entirely.
-
-## Guard
-
-`npm run build` runs `scripts/check-photo-access.mjs`, which fails if
-`getCollection('photos')` or `getEntry('photos')` appears outside
-`src/lib/photos.ts`. Reading the collection directly returns sidecars only, so
-photos without metadata would silently disappear from that page.
-
-## Routes
-
-| Route | Page |
-|---|---|
-| `/` | all photos, reverse-chronological, grouped, masonry |
-| `/photos/{yyyymmdd}/{slug}/` | photo or video with metadata box |
-| `/artists/`, `/locations/`, `/tags/` | indexes |
-| `/artists/{id}/`, `/works/{id}/`, `/locations/{id}/`, `/visits/{id}/`, `/exhibitions/{id}/`, `/tags/{tag}/` | entity pages |
-
-`<ClientRouter />` handles soft navigation. That is the only client-side script.
+Licensing: photos [CC BY 4.0](LICENSE), site code [MIT](LICENSE-CODE).
