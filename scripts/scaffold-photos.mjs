@@ -118,6 +118,17 @@ function splitList(value) {
 		.filter(Boolean);
 }
 
+/** Read a manifest as yaml, whether it is plain or wrapped in `---`. */
+async function readManifest(file) {
+	try {
+		const contents = await readFile(file, 'utf8');
+		const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/m.exec(contents);
+		return parseYaml(frontmatter ? frontmatter[1] : contents) ?? {};
+	} catch {
+		return {};
+	}
+}
+
 const plan = {
 	images: [],
 	sidecars: [],
@@ -219,21 +230,16 @@ async function importFolder(folder) {
 	if (images.length === 0) return;
 
 	const manifestPath = path.join(folder, 'photos.yml');
-	let manifest = {};
-	try {
-		manifest = parseYaml(await readFile(manifestPath, 'utf8')) ?? {};
-	} catch {
-		// Prompted below and written back.
-	}
+	const manifest = await readManifest(manifestPath);
 	const manifestPhotos = manifest.photos ?? {};
 
 	console.log(`\n── ${path.relative(ROOT, folder)}`);
 
 	// --- Location (required) -------------------------------------------------
 	let locationName = typeof manifest.location === 'string' ? manifest.location : undefined;
-	if (!locationName && interactive) {
-		const answer = await ask('Location: ');
-		locationName = answer.trim() || undefined;
+	if (interactive) {
+		const answer = await ask(`Location${locationName ? ` (${locationName})` : ''}: `);
+		if (answer.trim()) locationName = answer.trim();
 	}
 	if (!locationName) {
 		plan.warnings.push(`${path.relative(ROOT, folder)}: no location; imported without a visit.`);
@@ -251,16 +257,21 @@ async function importFolder(folder) {
 					tags: Array.isArray(entry?.tags) ? entry.tags : [],
 				},
 	);
-	if (interactive && exhibitionEntries.length === 0) {
-		const answer = await ask('Exhibitions, comma-separated (blank for none): ');
-		exhibitionEntries = splitList(answer).map((name) => ({ name, tags: [] }));
+	if (interactive) {
+		const existing = exhibitionEntries.map((entry) => entry.name).join(', ');
+		const answer = await ask(
+			`Exhibitions, comma-separated${existing ? ` (${existing})` : ''} (blank for none): `,
+		);
+		if (answer.trim()) exhibitionEntries = splitList(answer).map((name) => ({ name, tags: [] }));
 	}
 
 	// --- Visit-wide tags (fanned into every photo) ----------------------------
 	let folderTags = Array.isArray(manifest.tags) ? manifest.tags : [];
-	if (interactive && !Array.isArray(manifest.tags)) {
-		const answer = await ask('Tags, comma-separated (blank for none): ');
-		folderTags = splitList(answer);
+	if (interactive) {
+		const answer = await ask(
+			`Tags, comma-separated${folderTags.length > 0 ? ` (${folderTags.join(', ')})` : ''} (blank for none): `,
+		);
+		if (answer.trim()) folderTags = splitList(answer);
 	}
 
 	// Echo what this folder will use, whether it came from the manifest or was
@@ -298,7 +309,7 @@ async function importFolder(folder) {
 			for (const line of yaml.trimEnd().split('\n')) console.log(`  ${line}`);
 		} else {
 			await mkdir(folder, { recursive: true });
-			await writeFile(manifestPath, `---\n${yaml.trimEnd()}\n---\n`);
+			await writeFile(manifestPath, `${yaml.trimEnd()}\n`);
 		}
 	}
 

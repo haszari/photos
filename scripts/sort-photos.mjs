@@ -134,13 +134,13 @@ for (const group of plan) {
 	try {
 		await writeFile(
 			manifest,
-			`---\n${stringifyYaml({
+			`${stringifyYaml({
 				location: null,
 				name: null,
 				date: `${group.datestamp.slice(0, 4)}-${group.datestamp.slice(4, 6)}-${group.datestamp.slice(6, 8)}`,
 				exhibitions: null,
 				photos: {},
-			}).trimEnd()}\n---\n`,
+			}).trimEnd()}\n`,
 			{ flag: 'wx' },
 		);
 		console.log(`  wrote ${path.relative(ROOT, manifest)}`);
