@@ -263,6 +263,20 @@ async function importFolder(folder) {
 		folderTags = splitList(answer);
 	}
 
+	// Echo what this folder will use, whether it came from the manifest or was
+	// just prompted, so a re-run confirms the already-entered answers.
+	console.log(
+		`  ${[
+			locationName ?? 'no location',
+			exhibitionEntries.length > 0
+				? `exhibitions: ${exhibitionEntries.map((entry) => entry.name).join(', ')}`
+				: null,
+			folderTags.length > 0 ? `tags: ${folderTags.join(', ')}` : null,
+		]
+			.filter(Boolean)
+			.join(' · ')}`,
+	);
+
 	// --- Save the completed manifest -----------------------------------------
 	const nextManifest = compact({
 		location: locationName ?? manifest.location,
