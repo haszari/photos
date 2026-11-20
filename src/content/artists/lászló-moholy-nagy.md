@@ -1,0 +1,3 @@
+---
+name: László Moholy-Nagy
+---
