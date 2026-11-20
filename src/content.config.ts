@@ -30,6 +30,8 @@ const locations = defineCollection({
 const exhibitions = defineCollection({
 	loader: glob({ base: './src/content/exhibitions', pattern: '**/*.md' }),
 	schema: entitySchema({
+		/** The venue. Almost every exhibition belongs to a location. */
+		location: reference('locations').optional(),
 		startDate: z.coerce.date().optional(),
 		endDate: z.coerce.date().optional(),
 		links,
