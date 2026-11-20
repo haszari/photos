@@ -8,7 +8,8 @@ Hosted at https://lab.cartoonbeats.com/photos/.
 
 ## Import photos
 
-An import is one visit: one place on one day.
+Each folder is one visit. The place, date and shows come from the folder's
+`photos.yml` (date falls back to the photos); the folder name is a label only.
 
 - Start: folder of image files, grouped by visit
 - (optional) Use script to split folders by date automatically
@@ -40,6 +41,8 @@ For example:
 - `incoming`
   - `Auckland, 29 June 2025 - Auckland Art Gallery`
   - `Auckland, 29 June 2025 - Michael Lett`
+
+The names are just for you — nothing reads them.
 
 ### (optional) Sort into date folders
 
@@ -194,7 +197,7 @@ src/content/
   locations/<id>.md
   exhibitions/<id>.md
   works/<id>.md
-  visits/<year>/<yyyymmdd>-<location>.md
+  visits/<id>.md          # generated: date + location, a suffix when needed
   tag-metadata/tags.yml
 ```
 
