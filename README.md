@@ -86,8 +86,7 @@ npm run convert:videos -- ~/Desktop/raw-export/IMG_4821.mov --mode loop --max-du
 
 First run asks for each folder's location and exhibitions, then writes that
 folder's `photos.yml` — a self-documenting template showing every editable
-field. Stop before it imports if you want to edit first — answer `n` at the
-confirm, or use `--preview` to see the plan without writing.
+field. Use `--preview` to see the plan before anything is written.
 
 Input: a folder of visit folders.
 
@@ -150,6 +149,7 @@ npm run import:photos ./incoming
 ```
 
 - `--apply` skips prompts and imports straight from the manifests.
+- A re-exported photo (crop, adjustment) replaces the existing file in place.
 - Already-imported photos are recognised by content, so only changed answers
   are applied.
 

@@ -145,6 +145,7 @@ function recordRef(raw) {
 
 const plan = {
 	images: [],
+	imageUpdates: [],
 	sidecars: [],
 	sidecarUpdates: [],
 	visitUpdates: [],
@@ -563,28 +564,25 @@ async function importFolder(folder) {
 		const extension = path.extname(name).toLowerCase();
 		const safeStem = path.basename(name, extension).replace(/\s+/g, '-').replace(/[^\p{L}\p{N}._-]/gu, '');
 		const destinationDir = path.join(CONTENT, 'photos', year, datestamp);
-		let filename = `${datestamp}-${safeStem}${extension}`;
-		let counter = 2;
-		let alreadyImported = false;
-		for (;;) {
-			const candidate = path.join(destinationDir, filename);
-			try {
-				if ((await hashFile(candidate)) === (await hashFile(path.join(folder, name)))) {
-					alreadyImported = true;
-					break;
-				}
-				filename = `${datestamp}-${safeStem}-${counter}${extension}`;
-				counter += 1;
-			} catch {
-				break;
-			}
+		const filename = `${datestamp}-${safeStem}${extension}`;
+		const destination = path.join(destinationDir, filename);
+		const sourcePath = path.join(folder, name);
+
+		// Identical file: skip. Changed file: replace in place, so a re-exported
+		// crop or adjustment updates the same photo instead of adding a `-2`.
+		let imageAction = 'new';
+		try {
+			const existingHash = await hashFile(destination);
+			imageAction = existingHash === (await hashFile(sourcePath)) ? 'skip' : 'update';
+		} catch {
+			imageAction = 'new';
 		}
 
-		if (alreadyImported) plan.skipped.push(`${name} (already imported)`);
-		else plan.images.push({ sourcePath: path.join(folder, name), destination: path.join(destinationDir, filename) });
+		if (imageAction === 'skip') plan.skipped.push(`${name} (already imported)`);
+		else if (imageAction === 'update') plan.imageUpdates.push({ sourcePath, destination });
+		else plan.images.push({ sourcePath, destination });
 
-		const sidecarStem = filename.slice(0, filename.length - extension.length);
-		const sidecarFile = path.join(destinationDir, `${sidecarStem}.md`);
+		const sidecarFile = path.join(destinationDir, `${filename.slice(0, filename.length - extension.length)}.md`);
 
 		const usefulKeys = ['artists', 'works', 'tags', 'alt', 'sourceCaption', 'exhibition', 'visit'];
 		const hasMetadata = usefulKeys.some((key) => sidecarData[key] !== undefined && sidecarData[key] !== '') ||
@@ -614,11 +612,10 @@ async function importFolder(folder) {
 					merged[key] = sidecarData[key];
 				}
 			}
-			plan.sidecarUpdates.push({
-				file: sidecarFile,
-				data: merged,
-				body: manifestPhoto.note ? `${String(manifestPhoto.note).trim()}\n` : existingSidecar.body,
-			});
+			const body = manifestPhoto.note ? `${String(manifestPhoto.note).trim()}\n` : existingSidecar.body;
+			if (!sameValue(merged, existingSidecar.data) || body !== (existingSidecar.body ?? '')) {
+				plan.sidecarUpdates.push({ file: sidecarFile, data: merged, body });
+			}
 			continue;
 		}
 
@@ -649,7 +646,7 @@ const ENTITY_LABELS = {
 
 function summaryLines() {
 	const lines = [
-		`  Photos: ${plan.images.length} added, ${plan.sidecarUpdates.length} metadata updated, ${plan.skipped.length} skipped`,
+		`  Photos: ${plan.images.length} added, ${plan.imageUpdates.length} replaced, ${plan.sidecarUpdates.length} metadata updated, ${plan.skipped.length} skipped`,
 	];
 	for (const kind of ['locations', 'artists', 'works', 'exhibitions', 'visits']) {
 		const added = stats[kind].added.size;
@@ -698,8 +695,10 @@ if (options.preview) {
 
 const hasWork =
 	plan.images.length > 0 ||
+	plan.imageUpdates.length > 0 ||
 	plan.sidecars.length > 0 ||
 	plan.sidecarUpdates.length > 0 ||
+	plan.visitUpdates.length > 0 ||
 	plan.entities.length > 0;
 
 if (!hasWork) {
@@ -708,19 +707,15 @@ if (!hasWork) {
 	process.exit(0);
 }
 
-if (!options.apply) {
-	const answer = await ask('\nWrite these files? [y/N] ');
-	if (!/^y(es)?$/i.test(answer.trim())) {
-		console.log('Aborted.');
-		prompt.close();
-		process.exit(0);
-	}
-}
 prompt.close();
 
 // --- Write -------------------------------------------------------------------
 
 for (const image of plan.images) {
+	await mkdir(path.dirname(image.destination), { recursive: true });
+	await copyFile(image.sourcePath, image.destination);
+}
+for (const image of plan.imageUpdates) {
 	await mkdir(path.dirname(image.destination), { recursive: true });
 	await copyFile(image.sourcePath, image.destination);
 }
