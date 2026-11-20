@@ -6,7 +6,7 @@ into plain files at deploy time, no database, no client-side data fetching.
 
 Hosted at https://lab.cartoonbeats.com/photos/.
 
-## Importing photos
+## Import photos
 
 An import is one visit: one place on one day.
 
@@ -22,7 +22,7 @@ maximum-quality JPEGs with captions and keywords embedded.
 - Quality: Maximum
 - Include: Caption, Keywords
 
-### 2. Place each moment in `incoming/`
+### 2. Move each moment into `incoming/`
 
 Input: the moment folders from step 1.
 
@@ -32,9 +32,9 @@ label only.
 - Copy the exported moment folders into `incoming/`.
 - One folder = one visit. Several shows at one gallery stay in the same folder.
 
-### 3. Sort a flat pile of mixed dates
+### 3. Sort a mixed-date folder
 
-Needed only when the export is one folder spanning several days, not moments.
+Only when the export is one folder spanning several days, not moments.
 
 Input: a flat folder of photos.
 
@@ -48,61 +48,9 @@ npm run sort:photos -- ~/Desktop/raw-export
 - Copies it into a dated folder and writes a blank `photos.yml`.
 - Skip this step when Apple already grouped the export by moment.
 
-### 4. Import
+### 4. Convert videos
 
-Input: `incoming/` (or another top folder) of visit folders.
-
-Output: images and metadata in `src/content/photos/<year>/<yyyymmdd>/`, plus
-artist, location, exhibition and visit records as needed.
-
-```sh
-npm run import:photos
-```
-
-- Prompts once per folder for location and exhibitions.
-- Writes those answers to the folder's `photos.yml`.
-- `--preview` prints the plan without writing; `--apply` skips all prompts.
-
-### 5. Review and re-run
-
-Input: the import's `git diff`.
-
-Output: corrected `photos.yml` and content.
-
-```sh
-npm run import:photos
-```
-
-- Edit the folder's `photos.yml`, then import again.
-- Already-imported photos are recognised by content, so only changed answers
-  are applied.
-
-### The manifest (`photos.yml`)
-
-One per folder, written by the importer and hand-editable.
-
-```yaml
-location: Auckland Art Gallery
-date: 2025-06-29
-exhibitions:
-  - Fiona Pardington
-  - name: Ancient Worlds
-    tags: [archaeology]
-tags: [gallery]
-photos:
-  IMG_7302.jpeg:
-    exhibition: Fiona Pardington
-    artists: [Fiona Pardington]
-    tags: [photography]
-```
-
-- `location` and `exhibitions` take a name or an id; a close-match typo is
-  corrected, an unmatched name becomes a new record.
-- `tags` and each exhibition's `tags` are added to the photos of that
-  visit/show. Tags live only on photos, never on records.
-- Dates come from the photos themselves; `date` overrides the whole folder.
-
-### Videos
+Only when the export contains `.mov` files.
 
 Input: `.mov` from a phone (or any video).
 
@@ -128,6 +76,60 @@ npm run convert:videos -- ~/Desktop/raw-export
 #### Dependencies
 
 - `ffmpeg` and `ffprobe` on the PATH. macOS: `brew install ffmpeg`.
+
+### 5. Import
+
+Input: `incoming/` (or another top folder) of visit folders.
+
+Output: images and metadata in `src/content/photos/<year>/<yyyymmdd>/`, plus
+artist, location, exhibition and visit records as needed.
+
+```sh
+npm run import:photos
+```
+
+- Prompts once per folder for location and exhibitions.
+- Writes those answers to the folder's `photos.yml`.
+- `--preview` prints the plan without writing; `--apply` skips all prompts.
+
+### 6. Review and re-run
+
+Input: the import's `git diff`.
+
+Output: corrected `photos.yml` and content.
+
+```sh
+npm run import:photos
+```
+
+- Edit the folder's `photos.yml`, then import again.
+- Already-imported photos are recognised by content, so only changed answers
+  are applied.
+
+### Edit the manifest (`photos.yml`)
+
+One per folder, written by the importer and hand-editable.
+
+```yaml
+location: Auckland Art Gallery
+date: 2025-06-29
+exhibitions:
+  - Fiona Pardington
+  - name: Ancient Worlds
+    tags: [archaeology]
+tags: [gallery]
+photos:
+  IMG_7302.jpeg:
+    exhibition: Fiona Pardington
+    artists: [Fiona Pardington]
+    tags: [photography]
+```
+
+- `location` and `exhibitions` take a name or an id; a close-match typo is
+  corrected, an unmatched name becomes a new record.
+- `tags` and each exhibition's `tags` are added to the photos of that
+  visit/show. Tags live only on photos, never on records.
+- Dates come from the photos themselves; `date` overrides the whole folder.
 
 ## Structure
 
@@ -177,7 +179,7 @@ graph LR
 - Tags belong only to photos; visit and exhibition tags are added to the photos at import.
 - Some common tags are hidden in UI, e.g. `art`, `desktop`, `wallpaper`, `mobile`.
 
-## Developing
+## Develop
 
 ```sh
 npm install
