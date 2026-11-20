@@ -15,8 +15,8 @@ An import is one visit: one place on one day.
 - (optional) Convert videos to looping web format
   - Defaults
   - Dependencies
-- Generate the manifest
-- (optional) Edit the manifest (`photos.yml`)
+- Generate metadata for import
+- (optional) Edit metadata for import (`photos.yml`)
 - Import
 - Review and re-run
 
@@ -82,7 +82,7 @@ npm run convert:videos -- ~/Desktop/raw-export/IMG_4821.mov --mode loop --max-du
 
 - `ffmpeg` and `ffprobe` on the PATH. macOS: `brew install ffmpeg`.
 
-### Generate the manifest
+### Generate metadata for import
 
 First run asks for each folder's location and exhibitions, then writes that
 folder's `photos.yml`. Stop before it imports if you want to edit first — answer
@@ -101,7 +101,7 @@ npm run import:photos ./incoming
 - Writes the answers to each folder's `photos.yml`.
 - `--preview` prints the plan without writing anything.
 
-### (optional) Edit the manifest (`photos.yml`)
+### (optional) Edit metadata for import (`photos.yml`)
 
 One per folder, written by the importer and hand-editable.
 
