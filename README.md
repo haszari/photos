@@ -10,45 +10,44 @@ Hosted at https://lab.cartoonbeats.com/photos/.
 
 An import is one visit: one place on one day.
 
-### 1. Export from Apple Photos
+### Start: folder of image files, grouped by visit
 
-Input: the Apple Photos library.
+For example, export from Apple Photos:
 
-Output: one folder per moment — e.g. `Auckland, 29 June 2025/` — of
-maximum-quality JPEGs with captions and keywords embedded.
+- `File → Export → Export [n] Photos…`
+- `Photo Kind: JPEG`
+- `Include:` 
+  - [x] `Title, Keywords and Caption`
+  - [x] `Location Information`
+- `Subfolder format: Moment Name`
 
-- File → Export → Export Photos…
-- Photo kind: JPEG
-- Quality: Maximum
-- Include: Caption, Keywords
+Output: folder with subfolders for each visit, containing high-quality images.
 
-### 2. Move each moment into `incoming/`
+Optionally, organise the photos into subfolders for each visit (e.g. different locations on same day), or even different exhibits at same location.
 
-Input: the moment folders from step 1.
+For example:
 
-Output: `incoming/<Location, date>/`, one folder per visit. The folder name is a
-label only.
+- `incoming`
+  - `Auckland, 29 June 2025 - Auckland Art Gallery`
+  - `Auckland, 29 June 2025 - Michael Lett`
 
-- Copy the exported moment folders into `incoming/`.
-- One folder = one visit. Several shows at one gallery stay in the same folder.
-
-### 3. Sort a mixed-date folder
-
-Only when the export is one folder spanning several days, not moments.
+### (optional) Use script to split folders by date automatically
 
 Input: a flat folder of photos.
 
-Output: `incoming/<yyyymmdd>/` folders, each with a draft `photos.yml`.
+If your folder contains photos from several days:
 
 ```sh
 npm run sort:photos -- ~/Desktop/raw-export
 ```
-
 - Reads each photo's capture date.
 - Copies it into a dated folder and writes a blank `photos.yml`.
 - Skip this step when Apple already grouped the export by moment.
 
-### 4. Convert videos
+
+Output: `incoming/<yyyymmdd>/` folders, each with a draft `photos.yml`.
+
+### (optional) Convert videos to looping web format
 
 Only when the export contains `.mov` files.
 
@@ -56,55 +55,41 @@ Input: `.mov` from a phone (or any video).
 
 Output: `.mp4` beside the source, a silent web loop, ready to import.
 
-#### Usage
-
 ```sh
+npm run convert:videos -- ~/Desktop/raw-export              # every video, incl. subfolders
 npm run convert:videos -- ~/Desktop/raw-export/IMG_4821.mov --mode loop --max-duration 8
-npm run convert:videos -- ~/Desktop/raw-export
 ```
 
-- Single file: converts that one file (the example adds `--mode loop` and an
-  8-second trim).
-- Folder: walks the folder and every subfolder, converting each video in place.
+#### Defaults
 
-#### Behaviour
-
-- Default is a boomerang (forward + reversed, seamless loop).
-- `--mode loop` for a straight clip.
-- Already-converted files are skipped unless `--force`.
+- Mode: boomerang (forward + reversed, seamless loop); `--mode loop` for a straight clip.
+- Trim: 6 seconds; `--max-duration` changes it.
+- Resolution and frame rate: unchanged; `--max-width` only downscales if wider (default 3840px), `--fps` resamples.
+- Quality: CRF 18; `--crf` changes it.
+- Existing `.mp4` files are skipped; `--force` re-encodes them.
 
 #### Dependencies
 
 - `ffmpeg` and `ffprobe` on the PATH. macOS: `brew install ffmpeg`.
 
-### 5. Import
+### Generate the manifest
 
-Input: `incoming/` (or another top folder) of visit folders.
+First run asks for each folder's location and exhibitions, then writes that
+folder's `photos.yml`. Stop before it imports if you want to edit first — answer
+`n` at the confirm, or use `--preview` to see the plan without writing.
 
-Output: images and metadata in `src/content/photos/<year>/<yyyymmdd>/`, plus
-artist, location, exhibition and visit records as needed.
+Input: a folder of visit folders.
+
+Output: a `photos.yml` in each folder.
 
 ```sh
-npm run import:photos
+npm run import:photos ./incoming
 ```
 
+- `incoming/` is only a convention — pass any top folder.
 - Prompts once per folder for location and exhibitions.
-- Writes those answers to the folder's `photos.yml`.
-- `--preview` prints the plan without writing; `--apply` skips all prompts.
-
-### 6. Review and re-run
-
-Input: the import's `git diff`.
-
-Output: corrected `photos.yml` and content.
-
-```sh
-npm run import:photos
-```
-
-- Edit the folder's `photos.yml`, then import again.
-- Already-imported photos are recognised by content, so only changed answers
-  are applied.
+- Writes the answers to each folder's `photos.yml`.
+- `--preview` prints the plan without writing anything.
 
 ### Edit the manifest (`photos.yml`)
 
@@ -130,6 +115,37 @@ photos:
 - `tags` and each exhibition's `tags` are added to the photos of that
   visit/show. Tags live only on photos, never on records.
 - Dates come from the photos themselves; `date` overrides the whole folder.
+
+### Import
+
+Applies every manifest: copies images, writes photo metadata, and creates any
+missing artist, location, exhibition and visit records.
+
+Input: a folder of visit folders, each with a `photos.yml`.
+
+Output: images and metadata in `src/content/photos/<year>/<yyyymmdd>/`, plus
+records as needed.
+
+```sh
+npm run import:photos ./incoming
+```
+
+- `--apply` skips prompts and imports straight from the manifests.
+- Already-imported photos are recognised by content, so only changed answers
+  are applied.
+
+### Review and re-run
+
+Input: the import's `git diff`.
+
+Output: corrected `photos.yml` and content.
+
+```sh
+npm run import:photos ./incoming
+```
+
+- Edit a folder's `photos.yml`, then import again.
+
 
 ## Structure
 
