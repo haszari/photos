@@ -147,8 +147,6 @@ src/content/
   tag-metadata/tags.yml
 ```
 
-Arrows read as containment — a photo is in a visit, a visit is at a location;
-the artist, work and tag edges read `by`, `of` and `tagged`.
 
 ```mermaid
 graph LR
@@ -163,8 +161,7 @@ graph LR
 ```
 
 - Tags belong only to photos; visit and exhibition tags are added to the photos at import.
-- Records carry a `name` and optional `links`.
-- Hidden tags (`art`, `desktop`, `wallpaper`, `mobile`) stay on the photo but appear nowhere.
+- Some common tags are hidden in UI, e.g. `art`, `desktop`, `wallpaper`, `mobile`.
 
 ## Developing
 
