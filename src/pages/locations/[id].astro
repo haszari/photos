@@ -7,8 +7,8 @@ import PhotoGroup from '../../components/PhotoGroup.astro';
 import EntityLinks from '../../components/EntityLinks.astro';
 import { getIndex } from '../../lib/content';
 import { groupPhotos } from '../../lib/groups';
-import { exhibitionsForLocation, photosForLocation } from '../../lib/queries';
-import { formatDate, formatDateRange } from '../../lib/format';
+import { photosForLocation } from '../../lib/queries';
+import { formatDate } from '../../lib/format';
 import { route } from '../../lib/url';
 
 export async function getStaticPaths() {
@@ -17,10 +17,10 @@ export async function getStaticPaths() {
 }
 
 const { location } = Astro.props;
-const [photos, exhibitions, note] = await Promise.all([
+const [photos, note, index] = await Promise.all([
 	photosForLocation(location.id),
-	exhibitionsForLocation(location.id),
 	render(location),
+	getIndex(),
 ]);
 const groups = await groupPhotos(photos);
 const facts = [location.data.address, location.data.city, location.data.country].filter(Boolean);
@@ -53,30 +53,6 @@ const primary = links[0];
 		</PageFacts>
 
 		{
-			exhibitions.length > 0 && (
-				<section class="exhibition-history">
-					<h2>Exhibitions</h2>
-					<ul>
-						{
-							exhibitions.map((exhibition) => (
-								<li>
-									<a href={route(`exhibitions/${exhibition.id}/`)}>
-										{exhibition.data.name}
-									</a>
-									{exhibition.data.startDate && (
-										<span class="exhibition-history__dates">
-											{formatDateRange(exhibition.data.startDate, exhibition.data.endDate)}
-										</span>
-									)}
-								</li>
-							))
-						}
-					</ul>
-				</section>
-			)
-		}
-
-		{
 			groups.map((group) => (
 				<PhotoGroup photos={group.photos}>
 					<Fragment slot="heading">
@@ -89,7 +65,22 @@ const primary = links[0];
 								)}
 							</time>
 						</span>
-						{group.visit?.data.name && <span>{group.visit.data.name}</span>}
+						{
+							group.visit?.data.exhibitions?.map((reference) => {
+								const exhibition = index.exhibitionById.get(reference.id);
+								return exhibition ? (
+									<span>
+										<a href={route(`exhibitions/${exhibition.id}/`)}>
+											{exhibition.data.name}
+										</a>
+										<TypeIcon type="exhibition" class="icon-inline" />
+									</span>
+								) : null;
+							})
+						}
+						{group.visit && !group.visit.data.exhibitions?.length && group.visit.data.name && (
+							<span>{group.visit.data.name}</span>
+						)}
 					</Fragment>
 				</PhotoGroup>
 			))

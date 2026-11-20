@@ -1,5 +1,5 @@
 import { getPhotos, byCaptureOrder, type Photo } from './photos';
-import { getIndex, workArtistIds, visitLocation, type Exhibition } from './content';
+import { getIndex, workArtistIds, visitLocation } from './content';
 import { canonicalTag, getTagRegistry, photoTags } from './tags';
 
 /** Photos whose sidecar references the work. */
@@ -32,14 +32,6 @@ export async function photosForArtist(artistId: string): Promise<Photo[]> {
 }
 
 /** Photos from a location: any visit there, plus direct location references. */
-/** Exhibitions that belong to a location, newest first by opening date. */
-export async function exhibitionsForLocation(locationId: string): Promise<Exhibition[]> {
-	const index = await getIndex();
-	return index.exhibitions
-		.filter((exhibition) => exhibition.data.location?.id === locationId)
-		.sort((a, b) => (b.data.startDate?.getTime() ?? 0) - (a.data.startDate?.getTime() ?? 0));
-}
-
 export async function photosForLocation(locationId: string): Promise<Photo[]> {
 	const [photos, index] = await Promise.all([getPhotos(), getIndex()]);
 	const visitIds = new Set(
