@@ -15,7 +15,10 @@ export const country = z
 	.regex(/^[A-Z]{2}$/, 'Use an uppercase ISO 3166-1 alpha-2 country code, e.g. NZ.');
 
 /** External pages for a record: artist profiles, gallery sites, listings. */
-export const links = z.array(z.string().url()).optional();
+export const links = z
+	.union([z.string().url(), z.array(z.string().url())])
+	.transform((value) => (Array.isArray(value) ? value : [value]))
+	.optional();
 
 /** Photo id of the image that stands for the record: `2026/20261118/20261118-IMG_4984`. */
 export const featuredPhoto = z.string().optional();

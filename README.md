@@ -113,13 +113,15 @@ location: Auckland Art Gallery
 # Or with record fields:
 # location:
 #   name: Auckland Art Gallery
-#   url: https://aucklandartgallery.com
+#   links:
+#     - https://aucklandartgallery.com
 date: 2025-06-29
 exhibitions:
   - Fiona Pardington
   - name: Ancient Worlds
     tags: [archaeology]
-    url: https://example.com/ancient-worlds
+    links:
+      - https://example.com/ancient-worlds
 tags: [gallery]
 photos:
   IMG_7302.jpeg:
@@ -129,9 +131,8 @@ photos:
 ```
 
 - `location` and each exhibition are a name, or an object whose extra keys
-  mirror the record's frontmatter — `links`, `url`, dates, address and so on.
-  `url` is shorthand for `links: [url, …]`; those fields land on the record
-  when it is created.
+  mirror the record's frontmatter — `links`, dates, address and so on. Those
+  fields land on the record when it is created.
 - `tags` and each exhibition's `tags` are added to the photos of that
   visit/show. Tags live only on photos, never on records.
 - A close-match typo is corrected, an unmatched name becomes a new record.

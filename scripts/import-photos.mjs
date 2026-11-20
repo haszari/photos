@@ -131,15 +131,13 @@ async function readManifest(file) {
 
 /**
  * A record reference in the manifest: a plain name, or an object whose extra
- * keys mirror the record's frontmatter (links, url, address, dates, …). `tags`
- * fans out to photos and never lands on the record; `url` is a shorthand for
- * `links: [{ url }]`.
+ * keys mirror the record's frontmatter (links, address, dates, …). `tags` fans
+ * out to photos and never lands on the record.
  */
 function recordRef(raw) {
 	if (typeof raw === 'string') return { name: raw, tags: [], extra: {} };
 	if (!raw || typeof raw !== 'object') return { name: '', tags: [], extra: {} };
-	const { name = raw.id ?? '', tags = [], url, ...extra } = raw;
-	if (url && !extra.links) extra.links = [url];
+	const { name = raw.id ?? '', tags = [], ...extra } = raw;
 	return { name: String(name), tags: Array.isArray(tags) ? tags : [], extra };
 }
 
@@ -198,7 +196,7 @@ const KIND_PATH = { locations: 'locations', artists: 'artists', works: 'works', 
 /** Written above every manifest so the editable shape is self-documenting. */
 const MANIFEST_HEADER = [
 	'# One visit: one location, one date.',
-	'# location: a name, or { name, url, links, ...record fields }',
+	'# location: a name, or { name, links, ...record fields }',
 	'# exhibitions: names, or { name, tags, url, links, ... }',
 	'# photos.<file>: { exhibition, artists, works, tags, alt, note, takenAt }',
 	'',
