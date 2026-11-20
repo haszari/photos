@@ -63,7 +63,7 @@ npm run convert:videos -- ~/Desktop/raw-export/IMG_4821.mov --mode loop --max-du
 #### Defaults
 
 - Mode: boomerang (forward + reversed, seamless loop); `--mode loop` for a straight clip.
-- Trim: 6 seconds; `--max-duration` changes it.
+- Trim: none — the whole clip; `--max-duration` cuts it to n seconds.
 - Resolution and frame rate: unchanged; `--max-width` only downscales if wider (default 3840px), `--fps` resamples.
 - Quality: CRF 18; `--crf` changes it.
 - Existing `.mp4` files are skipped; `--force` re-encodes them.

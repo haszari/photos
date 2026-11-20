@@ -12,7 +12,7 @@
  *   --max-width <px>         Only downscale if wider than this (default 3840, 4K)
  *   --fps <n>                Resample frame rate (default: keep source)
  *   --crf <n>                x264 quality, lower is better (default 18)
- *   --max-duration <secs>    Trim source before processing (default 6)
+ *   --max-duration <secs>    Trim the source to this many seconds (default: full duration)
  *   --force                  Re-encode files that already exist
  *   --dry-run                Print what would happen
  *
@@ -35,7 +35,7 @@ const options = {
 	maxWidth: 3840,
 	fps: 0,
 	crf: 18,
-	maxDuration: 6,
+	maxDuration: undefined,
 	force: false,
 	dryRun: false,
 };
@@ -65,7 +65,7 @@ if (!MODES.has(options.mode)) throw new Error(`Unknown mode "${options.mode}".`)
 if (!Number.isFinite(options.maxWidth) || options.maxWidth < 2) throw new Error('Invalid --max-width.');
 if (!Number.isFinite(options.fps) || options.fps < 0) throw new Error('Invalid --fps.');
 if (!Number.isFinite(options.crf) || options.crf < 0 || options.crf > 51) throw new Error('Invalid --crf.');
-if (!Number.isFinite(options.maxDuration) || options.maxDuration <= 0) {
+if (options.maxDuration !== undefined && (!Number.isFinite(options.maxDuration) || options.maxDuration <= 0)) {
 	throw new Error('Invalid --max-duration.');
 }
 
@@ -160,7 +160,8 @@ try {
 		if (info.width > cap) filters.push(`scale=w='trunc(min(iw,${cap})/2)*2':h=-2:flags=lanczos`);
 		const chain = filters.join(',');
 
-		const args = ['-y', '-i', sourcePath, '-t', String(options.maxDuration)];
+		const args = ['-y', '-i', sourcePath];
+		if (options.maxDuration !== undefined) args.push('-t', String(options.maxDuration));
 		if (options.mode === 'boomerang') {
 			// Build a palindrome: forward, then reversed, concatenated.
 			args.push(
