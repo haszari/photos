@@ -153,7 +153,7 @@ the artist, work and tag edges read `by`, `of` and `tagged`.
 ```mermaid
 graph LR
     photo((photo)) -->|in| visit(visit)
-    photo -->|by| artist(artist)
+    photo -->|of work by| artist(artist)
     photo -->|of| work(work)
     photo -->|tagged| tag(tag)
     photo -->|in| exhibition(exhibition)
