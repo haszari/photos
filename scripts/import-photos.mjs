@@ -148,7 +148,6 @@ const plan = {
 	imageUpdates: [],
 	sidecars: [],
 	sidecarUpdates: [],
-	visitUpdates: [],
 	entities: [],
 	skipped: [],
 	warnings: [],
@@ -397,48 +396,47 @@ async function importFolder(folder) {
 
 	const visitDate = folderDate ?? (images.length > 0 ? datestampFor(images[0]) : undefined);
 	const year = visitDate ? visitDate.slice(0, 4) : undefined;
-	const visitId = location && visitDate
-		? `${year}/${visitDate}-${location.id}`
+	const visitDateIso = visitDate
+		? isoDate(new Date(Date.UTC(
+				Number(visitDate.slice(0, 4)),
+				Number(visitDate.slice(4, 6)) - 1,
+				Number(visitDate.slice(6, 8)),
+			)))
 		: undefined;
 
 	let visit = undefined;
-	if (location && visitId) {
-		visit = visits.find((entry) => entry.id === visitId);
+	if (location && visitDate) {
+		const exhibitionIds = resolvedExhibitions.map((exhibition) => exhibition.id).sort();
+
+		// A folder is its own visit. Match an existing one by location, date and
+		// the same shows, so two folders at one gallery on one day are two visits.
+		visit = visits.find((entry) => {
+			if (entry.data.location !== location.id) return false;
+			if (entry.data.visitedAt && isoDate(new Date(entry.data.visitedAt)) !== visitDateIso) return false;
+			const existing = [...(entry.data.exhibitions ?? [])].sort();
+			return JSON.stringify(existing) === JSON.stringify(exhibitionIds);
+		});
+
 		if (visit) {
 			stats.visits.reused.add(visit.id);
-			// Several folders can be the same location and day; accumulate their
-			// exhibitions onto the one visit rather than dropping later shows.
-			const existing = visit.data.exhibitions ?? [];
-			const added = resolvedExhibitions
-				.filter((exhibition) => !existing.includes(exhibition.id))
-				.map((exhibition) => exhibition.id);
-			if (added.length > 0 || (manifest.name && !visit.data.name)) {
-				visit.data = {
-					...visit.data,
-					...(added.length > 0 ? { exhibitions: [...existing, ...added] } : {}),
-					...(manifest.name && !visit.data.name ? { name: manifest.name } : {}),
-				};
-				plan.visitUpdates.push({ id: visit.id, data: visit.data });
+		} else {
+			const base = `${year}/${visitDate}-${location.id}`;
+			let id = base;
+			if (visits.some((entry) => entry.id === id)) {
+				const suffix = exhibitionEntries.length > 0 ? slugify(exhibitionEntries[0].name) : 'visit';
+				id = `${base}-${suffix}`;
+				let counter = 2;
+				while (visits.some((entry) => entry.id === id)) {
+					id = `${base}-${counter}`;
+					counter += 1;
+				}
 			}
-		}
-		if (!visit) {
-			const data = {
-				location: location.id,
-				visitedAt: isoDate(new Date(
-					Date.UTC(
-						Number(visitDate.slice(0, 4)),
-						Number(visitDate.slice(4, 6)) - 1,
-						Number(visitDate.slice(6, 8)),
-					),
-				)),
-			};
+			const data = { location: location.id, visitedAt: visitDateIso };
 			if (manifest.name) data.name = manifest.name;
-			if (resolvedExhibitions.length > 0) {
-				data.exhibitions = resolvedExhibitions.map((exhibition) => exhibition.id);
-			}
-			visit = { id: visitId, data };
+			if (exhibitionIds.length > 0) data.exhibitions = exhibitionIds;
+			visit = { id, data };
 			visits.push(visit);
-			plan.entities.push(`visits/${visitId}.md`);
+			plan.entities.push(`visits/${id}.md`);
 			stats.visits.added.add(visit.id);
 		}
 	}
@@ -661,7 +659,6 @@ const details = [
 	...plan.entities.map((entity) => `  ${entity}`),
 	...plan.sidecars.map((sidecar) => `  ${path.relative(ROOT, sidecar.file)}`),
 	...plan.sidecarUpdates.map((update) => `  ${path.relative(ROOT, update.file)} (update)`),
-	...plan.visitUpdates.map((update) => `  visits/${update.id}.md (update)`),
 	...plan.skipped.map((skipped) => `  ${skipped}`),
 	...plan.warnings.map((warning) => `  ! ${warning}`),
 ];
@@ -698,7 +695,6 @@ const hasWork =
 	plan.imageUpdates.length > 0 ||
 	plan.sidecars.length > 0 ||
 	plan.sidecarUpdates.length > 0 ||
-	plan.visitUpdates.length > 0 ||
 	plan.entities.length > 0;
 
 if (!hasWork) {
@@ -707,6 +703,14 @@ if (!hasWork) {
 	process.exit(0);
 }
 
+if (!options.apply) {
+	const answer = await ask('\nProceed with import? [y/N] ');
+	if (!/^y(es)?$/i.test(answer.trim())) {
+		console.log('Aborted.');
+		prompt.close();
+		process.exit(0);
+	}
+}
 prompt.close();
 
 // --- Write -------------------------------------------------------------------
@@ -753,11 +757,5 @@ for (const entity of plan.entities) {
 	});
 }
 
-for (const update of plan.visitUpdates) {
-	const file = path.join(CONTENT, 'visits', `${update.id}.md`);
-	await mkdir(path.dirname(file), { recursive: true });
-	const frontmatter = stringifyYaml(update.data).trimEnd();
-	await writeFile(file, `---\n${frontmatter}\n---\n`);
-}
 
 console.log('\nDone.');
