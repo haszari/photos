@@ -2,7 +2,7 @@
 /**
  * Convert phone videos into silent web loops.
  *
- *   npm run convert:videos -- ./incoming/20261118      # whole folder
+ *   npm run convert:videos -- ./incoming/20261118      # folder and its subfolders
  *   npm run convert:videos -- ./incoming/IMG_4821.mov   # single file
  *   npm run convert:videos -- ./incoming/20261118 --mode loop --width 960
  *
@@ -78,10 +78,10 @@ const targets = sourceStat.isFile()
 	? isVideo(source)
 		? [{ dir: path.dirname(source), name: path.basename(source) }]
 		: []
-	: (await readdir(source, { withFileTypes: true }))
+	: (await readdir(source, { withFileTypes: true, recursive: true }))
 			.filter((entry) => entry.isFile() && isVideo(entry.name))
-			.map((entry) => ({ dir: source, name: entry.name }))
-			.sort((a, b) => a.name.localeCompare(b.name));
+			.map((entry) => ({ dir: entry.parentPath ?? source, name: entry.name }))
+			.sort((a, b) => path.join(a.dir, a.name).localeCompare(path.join(b.dir, b.name)));
 
 if (targets.length === 0) {
 	console.log(`No video files in ${options.source}.`);
