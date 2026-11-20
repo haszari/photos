@@ -29,7 +29,7 @@ const primary = links[0];
 	path={`artists/${artist.id}/`}
 	title={artist.data.name}
 	description={`Photos of work by ${artist.data.name}.`}
-	headingHref={primary?.url}
+	headingHref={primary}
 	headingExternal={links.length === 1}
 >
 	<TypeIcon slot="heading-icon" type="artist" />

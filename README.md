@@ -130,7 +130,7 @@ photos:
 
 - `location` and each exhibition are a name, or an object whose extra keys
   mirror the record's frontmatter — `links`, `url`, dates, address and so on.
-  `url` is shorthand for `links: [{ url }]`; those fields land on the record
+  `url` is shorthand for `links: [url, …]`; those fields land on the record
   when it is created.
 - `tags` and each exhibition's `tags` are added to the photos of that
   visit/show. Tags live only on photos, never on records.

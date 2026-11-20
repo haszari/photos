@@ -139,7 +139,7 @@ function recordRef(raw) {
 	if (typeof raw === 'string') return { name: raw, tags: [], extra: {} };
 	if (!raw || typeof raw !== 'object') return { name: '', tags: [], extra: {} };
 	const { name = raw.id ?? '', tags = [], url, ...extra } = raw;
-	if (url && !extra.links) extra.links = [{ url }];
+	if (url && !extra.links) extra.links = [url];
 	return { name: String(name), tags: Array.isArray(tags) ? tags : [], extra };
 }
 

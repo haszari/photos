@@ -1,34 +1,28 @@
 ---
 /**
- * External pages for a record. Rendered inside a page's facts line as plain
- * links: a supplied label wins, otherwise the hostname (`citygallery.org.nz`).
+ * External pages for a record, rendered in its facts line. Each link is a
+ * plain URL; the label is its hostname (`citygallery.org.nz`).
  */
-interface Link {
-	label?: string;
-	url: string;
-}
-
 interface Props {
-	links: Link[];
+	links: string[];
 }
 
 const { links } = Astro.props;
 
-function labelFor(link: Link): string {
-	if (link.label) return link.label;
+function labelFor(url: string): string {
 	try {
-		return new URL(link.url).hostname.replace(/^www\./, '');
+		return new URL(url).hostname.replace(/^www\./, '');
 	} catch {
-		return link.url;
+		return url;
 	}
 }
 ---
 
 {
-	links.map((link) => (
+	links.map((url) => (
 		<span>
-			<a href={link.url} rel="noopener noreferrer">
-				{labelFor(link)}
+			<a href={url} rel="noopener noreferrer">
+				{labelFor(url)}
 			</a>
 		</span>
 	))

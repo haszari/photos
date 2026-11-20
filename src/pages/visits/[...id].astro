@@ -39,7 +39,7 @@ const primary = links[0];
 	path={`visits/${visit.id}/`}
 	title={title}
 	description={location ? `Photos at ${location.data.name}.` : undefined}
-	headingHref={primary?.url}
+	headingHref={primary}
 	headingExternal={links.length === 1}
 >
 	<TypeIcon slot="heading-icon" type="visit" />

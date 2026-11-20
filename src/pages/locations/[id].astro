@@ -29,7 +29,7 @@ const primary = links[0];
 	path={`locations/${location.id}/`}
 	title={location.data.name}
 	description={`Photos taken at ${location.data.name}.`}
-	headingHref={primary?.url}
+	headingHref={primary}
 	headingExternal={links.length === 1}
 >
 	<TypeIcon slot="heading-icon" type="location" />
