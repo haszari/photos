@@ -235,30 +235,6 @@ p {
 	margin-inline: auto;
 }
 
-/* A location's exhibition history, above its photo groups. */
-.exhibition-history h2 {
-	font-size: 1rem;
-	font-weight: 500;
-	margin: 0;
-	color: var(--ink-heading);
-}
-
-.exhibition-history ul {
-	list-style: none;
-	margin: 0.5rem 0 0;
-	padding: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 0.25rem;
-}
-
-.exhibition-history__dates {
-	color: var(--ink);
-	opacity: 0.6;
-	font-size: 0.9rem;
-	margin-inline-start: 0.5rem;
-}
-
 /* Date / visit heading below a photo group, in the grid's inset. */
 .photo-group + .photo-group {
 	margin-top: clamp(1rem, 2.5vw, 1.75rem);
@@ -410,9 +386,18 @@ p {
 	white-space: nowrap;
 }
 
-/* A breath between artist/work, place and tags, as in the sketch. */
+/* A breath between artist/work, the exhibition/place group, and tags. */
+.photo-meta__line--exhibition {
+	margin-top: 0.53rem;
+}
+
 .photo-meta__line--place {
 	margin-top: 0.53rem;
+}
+
+/* The gallery line sits close under its exhibition line. */
+.photo-meta__line--place--no-breath {
+	margin-top: 0;
 }
 
 .photo-meta__line--tags {

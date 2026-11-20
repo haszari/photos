@@ -101,8 +101,8 @@ const cardExhibitions = relations.exhibitions.filter(
 					)
 				}
 				{
-					(cardExhibitions.length > 0 || relations.location || placeDate) && (
-						<p class="photo-meta__line photo-meta__line--muted photo-meta__line--place">
+					cardExhibitions.length > 0 && (
+						<p class="photo-meta__line photo-meta__line--muted photo-meta__line--exhibition">
 							{cardExhibitions.map((exhibition, index) => (
 								<>
 									{index > 0 && ' '}
@@ -113,7 +113,19 @@ const cardExhibitions = relations.exhibitions.filter(
 									</span>
 								</>
 							))}
-							{cardExhibitions.length > 0 && (relations.location || placeDate) && ' '}
+						</p>
+					)
+				}
+				{
+					(relations.location || placeDate) && (
+						<p
+							class:list={[
+								'photo-meta__line',
+								'photo-meta__line--muted',
+								'photo-meta__line--place',
+								{ 'photo-meta__line--place--no-breath': cardExhibitions.length > 0 },
+							]}
+						>
 							{relations.location && (
 								<span class="photo-meta__location">
 									<a href={route(`locations/${relations.location.id}/`)}>
@@ -121,8 +133,9 @@ const cardExhibitions = relations.exhibitions.filter(
 									</a>
 								</span>
 							)}
+							{relations.location && placeDate && ' '}
 							{placeDate && (
-								<span class="photo-meta__date">{` ${formatDate(placeDate)}`}</span>
+								<span class="photo-meta__date">{formatDate(placeDate)}</span>
 							)}
 						</p>
 					)
