@@ -115,7 +115,28 @@ npm run convert:videos -- ./incoming/20261114
 - Default is a boomerang (forward + reversed, seamless loop).
 - `--mode loop` for a straight clip.
 
-## Content model
+## Structure
+
+### Routes and site map
+
+| Route | Page |
+|---|---|
+| `/` | all photos, reverse-chronological, grouped into a masonry grid |
+| `/photos/{yyyymmdd}/{slug}/` | one photo or video with its metadata card |
+| `/artists/` | artist index |
+| `/locations/` | location index |
+| `/tags/` | tag cloud |
+| `/artists/{id}/` | one artist's photos |
+| `/works/{id}/` | photos of one work |
+| `/locations/{id}/` | photos from one location, grouped by visit |
+| `/visits/{id}/` | photos from one visit |
+| `/exhibitions/{id}/` | photos from one exhibition |
+| `/tags/{tag}/` | photos with one tag |
+
+Navigation is a top bar: home on the left, browse links on the right, on every
+page. Each entity page shows a title, an optional facts line, and its photos.
+
+### Content model
 
 ```text
 src/content/
