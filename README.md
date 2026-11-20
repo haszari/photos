@@ -13,8 +13,10 @@ An import is one visit: one place on one day.
 - Start: folder of image files, grouped by visit
 - (optional) Use script to split folders by date automatically
 - (optional) Convert videos to looping web format
+  - Defaults
+  - Dependencies
 - Generate the manifest
-- Edit the manifest (`photos.yml`)
+- (optional) Edit the manifest (`photos.yml`)
 - Import
 - Review and re-run
 
@@ -99,7 +101,7 @@ npm run import:photos ./incoming
 - Writes the answers to each folder's `photos.yml`.
 - `--preview` prints the plan without writing anything.
 
-### Edit the manifest (`photos.yml`)
+### (optional) Edit the manifest (`photos.yml`)
 
 One per folder, written by the importer and hand-editable.
 
