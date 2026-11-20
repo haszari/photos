@@ -41,7 +41,7 @@ const primary = links[0];
 						{facts.map((fact) => (
 							<span>{fact}</span>
 						))}
-						{links.length > 1 && <EntityLinks links={links} />}
+						{links.length > 1 && <EntityLinks links={links.slice(1)} />}
 					</Fragment>
 				)
 			}

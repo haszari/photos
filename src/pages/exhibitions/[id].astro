@@ -38,7 +38,7 @@ const primary = links[0];
 				(dates || links.length > 1) && (
 					<Fragment slot="facts">
 						{dates && <span>{dates}</span>}
-						{links.length > 1 && <EntityLinks links={links} />}
+						{links.length > 1 && <EntityLinks links={links.slice(1)} />}
 					</Fragment>
 				)
 			}

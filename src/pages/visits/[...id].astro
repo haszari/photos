@@ -62,7 +62,7 @@ const primary = links[0];
 								<TypeIcon type="exhibition" class="icon-inline" />
 							</span>
 						))}
-						{links.length > 1 && <EntityLinks links={links} />}
+						{links.length > 1 && <EntityLinks links={links.slice(1)} />}
 						{location && visit.data.name && (
 							<span>
 								<a href={route(`locations/${location.id}/`)}>{location.data.name}</a>
