@@ -10,13 +10,13 @@ Hosted at https://lab.cartoonbeats.com/photos/.
 
 An import is one visit: one place on one day.
 
-- [Start: folder of image files, grouped by visit](#start-folder-of-image-files-grouped-by-visit)
-- [(optional) Use script to split folders by date automatically](#optional-use-script-to-split-folders-by-date-automatically)
-- [(optional) Convert videos to looping web format](#optional-convert-videos-to-looping-web-format)
-- [Generate the manifest](#generate-the-manifest)
-- [Edit the manifest (`photos.yml`)](#edit-the-manifest-photosyml)
-- [Import](#import)
-- [Review and re-run](#review-and-re-run)
+- Start: folder of image files, grouped by visit
+- (optional) Use script to split folders by date automatically
+- (optional) Convert videos to looping web format
+- Generate the manifest
+- Edit the manifest (`photos.yml`)
+- Import
+- Review and re-run
 
 ### Start: folder of image files, grouped by visit
 
