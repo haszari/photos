@@ -41,21 +41,21 @@ For example:
   - `Auckland, 29 June 2025 - Auckland Art Gallery`
   - `Auckland, 29 June 2025 - Michael Lett`
 
-### (optional) Use script to split folders by date automatically
+### (optional) Sort into date folders
+
+Only when the export is one flat folder spanning several days, not moments.
 
 Input: a flat folder of photos.
 
-If your folder contains photos from several days:
+Output: `incoming/<yyyymmdd>/` folders.
 
 ```sh
-npm run sort:photos -- ~/Desktop/raw-export
+npm run sort-by-date -- ~/Desktop/raw-export
 ```
-- Reads each photo's capture date.
-- Copies it into a dated folder and writes a blank `photos.yml`.
+
+- Reads each photo's capture date and copies it into a dated folder.
+- Knows nothing about the data model — the import step creates `photos.yml`.
 - Skip this step when Apple already grouped the export by moment.
-
-
-Output: `incoming/<yyyymmdd>/` folders, each with a draft `photos.yml`.
 
 ### (optional) Convert videos to looping web format
 
@@ -85,8 +85,9 @@ npm run convert:videos -- ~/Desktop/raw-export/IMG_4821.mov --mode loop --max-du
 ### Generate metadata for import
 
 First run asks for each folder's location and exhibitions, then writes that
-folder's `photos.yml`. Stop before it imports if you want to edit first — answer
-`n` at the confirm, or use `--preview` to see the plan without writing.
+folder's `photos.yml` — a self-documenting template showing every editable
+field. Stop before it imports if you want to edit first — answer `n` at the
+confirm, or use `--preview` to see the plan without writing.
 
 Input: a folder of visit folders.
 

@@ -185,6 +185,15 @@ async function ask(question) {
 const interactive = !options.apply && Boolean(process.stdin.isTTY);
 const KIND_PATH = { locations: 'locations', artists: 'artists', works: 'works', exhibitions: 'exhibitions' };
 
+/** Written above every manifest so the editable shape is self-documenting. */
+const MANIFEST_HEADER = [
+	'# One visit: one location, one date.',
+	'# location: a name, or { name, url, links, ...record fields }',
+	'# exhibitions: names, or { name, tags, url, links, ... }',
+	'# photos.<file>: { exhibition, artists, works, tags, alt, note, takenAt }',
+	'',
+].join('\n');
+
 /** Resolve a typed name against a collection, creating it when nothing matches. */
 async function resolveNamed(kind, records, name, extra = {}) {
 	if (!name) return undefined;
@@ -330,10 +339,12 @@ async function importFolder(folder) {
 		const yaml = stringifyYaml(nextManifest);
 		if (options.preview) {
 			console.log(`\nWould save ${path.relative(ROOT, manifestPath)}:`);
-			for (const line of yaml.trimEnd().split('\n')) console.log(`  ${line}`);
+			for (const line of `${MANIFEST_HEADER}${yaml}`.trimEnd().split('\n')) {
+				console.log(`  ${line}`);
+			}
 		} else {
 			await mkdir(folder, { recursive: true });
-			await writeFile(manifestPath, `${yaml.trimEnd()}\n`);
+			await writeFile(manifestPath, `${MANIFEST_HEADER}${yaml.trimEnd()}\n`);
 		}
 	}
 

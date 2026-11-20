@@ -2,19 +2,19 @@
 /**
  * Sort a raw dump of photos into `incoming/<yyyymmdd>/` folders.
  *
- *   npm run sort:photos -- ~/Desktop/raw-export [--preview]
+ *   npm run sort-by-date -- ~/Desktop/raw-export [--preview]
  *
  * Apple Photos already exports "moments" grouped by place and date, so this is
  * the fallback for a flat folder of images from several days. Each photo's
- * EXIF (or ffprobe) capture date chooses its folder; the folder gets a draft
- * `photos.yml` with `location` and `exhibitions` left blank. Rename the folder
- * to `Location, date` and fill the manifest, then run `npm run import:photos`.
+ * EXIF (or ffprobe) capture date chooses its folder. It copies files only — it
+ * knows nothing about the site's data model; `import:photos` creates the
+ * manifests.
  *
  * Files are copied unchanged. An identical file (same content hash) is skipped;
  * a different file with the same name gets a `-2` suffix. `--preview` prints
  * the plan and writes nothing.
  */
-import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import {
@@ -42,7 +42,7 @@ for (let index = 0; index < argv.length; index += 1) {
 }
 
 if (!options.source) {
-	console.error('Usage: npm run sort:photos -- <source-dir> [--preview]');
+	console.error('Usage: npm run sort-by-date -- <source-dir> [--preview]');
 	process.exit(1);
 }
 
@@ -100,7 +100,7 @@ for (const [datestamp, files] of [...groups.entries()].sort()) {
 		}
 		copies.push({ sourcePath, destination: resolved, identical });
 	}
-	plan.push({ datestamp, dir, manifest: path.join(dir, 'photos.yml'), copies });
+	plan.push({ datestamp, dir, copies });
 }
 
 for (const group of plan) {
@@ -109,7 +109,6 @@ for (const group of plan) {
 		const mark = copy.identical ? '  (already imported)' : '';
 		console.log(`  ${path.basename(copy.sourcePath)} -> ${path.relative(ROOT, copy.destination)}${mark}`);
 	}
-	if (undated.length > 0) console.log('  (no capture date: skipped)');
 }
 
 if (skipped.length > 0) {
@@ -117,7 +116,7 @@ if (skipped.length > 0) {
 	for (const item of skipped) console.log(`  ${item}`);
 }
 if (undated.length > 0) {
-	console.log('\nNo capture date (pass --date later, or set `date:` in the manifest):');
+	console.log('\nNo capture date; these were not sorted:');
 	for (const name of undated) console.log(`  ${name}`);
 }
 
@@ -129,18 +128,6 @@ if (options.preview) {
 let copies = 0;
 for (const group of plan) {
 	await mkdir(group.dir, { recursive: true });
-	const manifest = group.manifest;
-	try {
-		const date = `${group.datestamp.slice(0, 4)}-${group.datestamp.slice(4, 6)}-${group.datestamp.slice(6, 8)}`;
-		await writeFile(
-			manifest,
-			`# One visit: one location, one date.\nlocation:\n# A record may be a name, or an object with its frontmatter fields:\n# location:\n#   name: Auckland Art Gallery\n#   links:\n#     - url: https://aucklandartgallery.com\nname:\ndate: ${date}\nexhibitions:\n#   - Fiona Pardington\n#   - name: Ancient Worlds\n#     tags: [archaeology]\n#     links:\n#       - url: https://example.com/ancient-worlds\ntags:\nphotos: {}\n#   IMG_7302.jpeg:\n#     exhibition: Fiona Pardington\n#     artists: [Fiona Pardington]\n#     works: [A Beautiful Hesitation]\n#     tags: [photography]\n#     alt: Fiona Pardington room view\n#     note: |\n#       Room view from the south end.\n`,
-			{ flag: 'wx' },
-		);
-		console.log(`  wrote ${path.relative(ROOT, manifest)}`);
-	} catch (error) {
-		if (error.code !== 'EEXIST') throw error;
-	}
 	for (const copy of group.copies) {
 		if (copy.identical) continue;
 		await copyFile(copy.sourcePath, copy.destination);
